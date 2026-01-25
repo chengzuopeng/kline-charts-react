@@ -233,6 +233,8 @@ export interface KLineChartProps {
   showPeriodSelector?: boolean;
   /** 是否显示指标切换 */
   showIndicatorSelector?: boolean;
+  /** 最多显示几个副图，默认 3，最大 3，传入 0 表示不显示副图 */
+  maxSubPanes?: number;
   /** 初始可见 K 线数量 */
   visibleCount?: number;
   /** 数据加载回调 */

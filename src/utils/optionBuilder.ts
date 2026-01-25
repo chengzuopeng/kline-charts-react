@@ -12,8 +12,23 @@ export const DATA_ZOOM_INSIDE_ID = 'kline-zoom-inside';
 export const DATA_ZOOM_SLIDER_ID = 'kline-zoom-slider';
 
 /**
+ * 智能格式化数值：整数不显示小数，非整数保留适当精度
+ */
+function smartFormat(value: number, decimals: number): string {
+  // 如果是整数，不显示小数部分
+  if (Number.isInteger(value)) {
+    return value.toString();
+  }
+  
+  const formatted = value.toFixed(decimals);
+  // 移除末尾的 0 和不必要的小数点
+  return formatted.replace(/\.?0+$/, '');
+}
+
+/**
  * Y轴数值格式化
  * 根据不同指标类型使用不同的格式化方式
+ * 整数不显示 .00
  */
 function formatYAxisValue(value: number, paneId: string): string {
   // 成交量用万/亿格式
@@ -23,37 +38,63 @@ function formatYAxisValue(value: number, paneId: string): string {
   
   // 对于较大的数值（如价格），保留两位小数
   if (Math.abs(value) >= 100) {
-    return value.toFixed(2);
+    return smartFormat(value, 2);
   }
   
   // 对于较小的数值（如 MACD、KDJ 等指标），根据数值大小动态调整精度
   if (Math.abs(value) >= 10) {
-    return value.toFixed(2);
+    return smartFormat(value, 2);
   }
   
   if (Math.abs(value) >= 1) {
-    return value.toFixed(2);
+    return smartFormat(value, 2);
   }
   
   // 非常小的数值保留更多精度
   if (Math.abs(value) >= 0.01) {
-    return value.toFixed(2);
+    return smartFormat(value, 2);
   }
   
-  return value.toFixed(4);
+  return smartFormat(value, 4);
+}
+
+/**
+ * 生成默认面板配置参数
+ */
+interface GetDefaultPanesOptions {
+  /** 最多显示几个副图，默认 3，最大 3，传入 0 表示不显示副图 */
+  maxSubPanes?: number;
 }
 
 /**
  * 生成默认面板配置
  * 每个副图指标独立一个面板
  */
-export function getDefaultPanes(indicators: IndicatorType[]): PaneConfig[] {
+export function getDefaultPanes(
+  indicators: IndicatorType[],
+  options: GetDefaultPanesOptions = {}
+): PaneConfig[] {
+  // 限制 maxSubPanes 范围：0-3
+  const maxSubPanes = Math.min(Math.max(options.maxSubPanes ?? 3, 0), 3);
+  
   // 副图指标（排除主图指标）
   const subIndicators = indicators.filter((i) => !MAIN_INDICATORS.includes(i));
+  
+  // 如果 maxSubPanes 为 0，不显示副图
+  if (maxSubPanes === 0) {
+    return [
+      {
+        id: 'main',
+        height: '95%',
+        indicators: MAIN_INDICATORS.filter((i) => indicators.includes(i)),
+      },
+    ];
+  }
+  
   const subCount = subIndicators.length;
+  const limitedSubCount = Math.min(subCount, maxSubPanes);
 
-  // 根据副图数量计算高度比例（最多 3 个副图）
-  const limitedSubCount = Math.min(subCount, 3);
+  // 根据副图数量计算高度比例
   const getHeights = () => {
     if (limitedSubCount === 0) return { main: '90%', sub: '0%' };
     if (limitedSubCount === 1) return { main: '70%', sub: '25%' };
@@ -72,8 +113,8 @@ export function getDefaultPanes(indicators: IndicatorType[]): PaneConfig[] {
     },
   ];
 
-  // 每个副图指标独立一个面板（最多 3 个）
-  subIndicators.slice(0, 3).forEach((indicator, index) => {
+  // 每个副图指标独立一个面板（最多 maxSubPanes 个）
+  subIndicators.slice(0, maxSubPanes).forEach((indicator, index) => {
     panes.push({
       id: `sub_${indicator}_${index}`,
       height: heights.sub,
@@ -191,6 +232,8 @@ export function buildOption(params: {
   const option: EChartsOption = {
     animation: false,
     backgroundColor: theme.backgroundColor,
+    // 显式清除 title（避免 "暂无数据" 残留）
+    title: { text: '', show: false },
     tooltip: {
       trigger: 'axis',
       axisPointer: {

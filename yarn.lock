@@ -1748,10 +1748,10 @@ sprintf-js@~1.0.2:
   resolved "https://registry.yarnpkg.com/sprintf-js/-/sprintf-js-1.0.3.tgz#04e6926f662895354f3dd015203633b857297e2c"
   integrity sha512-D9cPgkvLlV3t3IzL0D0YLvGA9Ahk4PcvVwUbN0dSGr1aP0Nrt4AEnTUbuGvquEC0mA64Gqt1fzirlRs5ibXx8g==
 
-stock-sdk@^1.0.0:
-  version "1.6.0"
-  resolved "https://registry.yarnpkg.com/stock-sdk/-/stock-sdk-1.6.0.tgz#9790670dab980709f8e5f377b6784d08693176a5"
-  integrity sha512-MhvlCQQaRV2ZSKh536yXqbnTebJnHuJ20n2FrCT/BuJaawm6l5hOidTJVJm6WMffgY4pSy8cT3z+dqMuEpsvJA==
+stock-sdk@^1.6.1:
+  version "1.6.1"
+  resolved "https://registry.yarnpkg.com/stock-sdk/-/stock-sdk-1.6.1.tgz#91c4f92b0e333a2c165c308acf05fe9e8d3e71a0"
+  integrity sha512-QFLsBj+SL8DjVZ7SE1mGzP+MuXVqIh3D9hEuMbpbY8Ls6sJNE9HcWXcQUB//I+JzQ+YZ+EDzV5Yrn4IDcGDf1Q==
 
 string-argv@~0.3.1:
   version "0.3.2"

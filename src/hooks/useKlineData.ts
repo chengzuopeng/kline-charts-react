@@ -23,7 +23,7 @@ import {
   calcCCI,
   calcATR,
 } from '@/utils/indicators';
-import { DataCache } from '@/utils/cache';
+import { DataCache, getTTLByPeriod } from '@/utils/cache';
 
 interface UseKlineDataParams {
   symbol: string;
@@ -46,6 +46,15 @@ interface UseKlineDataResult {
 }
 
 const cache = new DataCache<KlineData[]>();
+
+// 请求去重：存储正在进行中的请求 Promise
+const pendingRequests = new Map<string, Promise<KlineData[]>>();
+
+/**
+ * 默认防抖时间（毫秒）
+ * 避免快速切换参数时发起过多请求
+ */
+const DEFAULT_DEBOUNCE_MS = 150;
 
 /**
  * 创建默认的数据提供者（基于 stock-sdk）
@@ -293,34 +302,75 @@ export function useKlineData(params: UseKlineDataParams): UseKlineDataResult {
 
     try {
       const provider = getProvider();
-
-      // 检查缓存
       const cacheKey = DataCache.buildKey({ symbol, market, period, adjust });
+      
+      // 1. 先检查缓存（最快路径）
       const cachedData = cache.get(cacheKey) as KlineData[] | undefined;
-
-      let klineData: KlineData[];
-
       if (cachedData && requestOptions?.dedupe !== false) {
-        klineData = cachedData;
-      } else {
-        klineData = await provider.getKline(
-          { symbol, market, period, adjust },
-          controller.signal
-        );
-        cache.set(cacheKey, klineData);
+        setRawData(cachedData);
+        setLoading(false);
+        
+        // 如果是分时周期，也检查分时数据缓存
+        if (period === 'timeline') {
+          const timelineCacheKey = DataCache.buildKey({ symbol, market, type: 'timeline' });
+          const cachedTimeline = cache.get(timelineCacheKey) as TimelineData[] | undefined;
+          if (cachedTimeline) {
+            setTimelineData(cachedTimeline);
+          }
+        }
+        return;
       }
 
-      // 检查是否已取消
-      if (controller.signal.aborted) return;
-
-      setRawData(klineData);
-
-      // 如果是分时周期，同时获取分时数据
-      if (period === 'timeline' && provider.getTimeline) {
-        const timeline = await provider.getTimeline({ symbol, market }, controller.signal);
-        if (!controller.signal.aborted) {
-          setTimelineData(timeline);
+      // 2. 检查是否有相同的请求正在进行中（请求去重）
+      const pendingRequest = pendingRequests.get(cacheKey);
+      if (pendingRequest) {
+        try {
+          const klineData = await pendingRequest;
+          if (!controller.signal.aborted) {
+            setRawData(klineData);
+          }
+        } catch {
+          // 复用的请求失败，忽略错误（会由原始请求处理）
+        } finally {
+          if (!controller.signal.aborted) {
+            setLoading(false);
+          }
         }
+        return;
+      }
+
+      // 3. 发起新请求
+      const requestPromise = provider.getKline(
+        { symbol, market, period, adjust },
+        controller.signal
+      );
+      
+      // 注册到 pending 请求中
+      pendingRequests.set(cacheKey, requestPromise);
+
+      try {
+        const klineData = await requestPromise;
+        
+        // 检查是否已取消
+        if (controller.signal.aborted) return;
+
+        // 根据周期类型设置缓存 TTL
+        const ttl = getTTLByPeriod(period);
+        cache.set(cacheKey, klineData, ttl);
+        setRawData(klineData);
+
+        // 如果是分时周期，同时获取分时数据
+        if (period === 'timeline' && provider.getTimeline) {
+          const timeline = await provider.getTimeline({ symbol, market }, controller.signal);
+          if (!controller.signal.aborted) {
+            const timelineCacheKey = DataCache.buildKey({ symbol, market, type: 'timeline' });
+            cache.set(timelineCacheKey, timeline as unknown as KlineData[], ttl);
+            setTimelineData(timeline);
+          }
+        }
+      } finally {
+        // 请求完成后从 pending 中移除
+        pendingRequests.delete(cacheKey);
       }
     } catch (err) {
       if ((err as Error).name === 'AbortError') return;
@@ -342,17 +392,13 @@ export function useKlineData(params: UseKlineDataParams): UseKlineDataResult {
 
   // 监听参数变化 - 直接监听核心参数，避免 useCallback 依赖问题
   useEffect(() => {
-    // 防抖处理
+    // 防抖处理（默认启用 150ms 防抖，减少快速切换时的请求）
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
     }
 
-    const debounceMs = requestOptions?.debounceMs ?? 0;
-    if (debounceMs > 0) {
-      debounceTimerRef.current = setTimeout(loadData, debounceMs);
-    } else {
-      loadData();
-    }
+    const debounceMs = requestOptions?.debounceMs ?? DEFAULT_DEBOUNCE_MS;
+    debounceTimerRef.current = setTimeout(loadData, debounceMs);
 
     return () => {
       if (debounceTimerRef.current) {

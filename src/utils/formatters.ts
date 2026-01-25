@@ -41,35 +41,49 @@ export function formatChange(value: number | null | undefined): string {
 }
 
 /**
+ * 智能格式化数值：整数不显示小数部分
+ */
+function smartNumber(value: number, decimals: number): string {
+  if (Number.isInteger(value)) {
+    return value.toString();
+  }
+  const formatted = value.toFixed(decimals);
+  // 移除末尾的 0 和不必要的小数点
+  return formatted.replace(/\.?0+$/, '');
+}
+
+/**
  * 格式化成交量（万/亿）
+ * 整数不显示 .00
  */
 export function formatVolume(value: number | null | undefined): string {
   if (value === null || value === undefined || isNaN(value)) {
     return '--';
   }
   if (value >= 100000000) {
-    return `${(value / 100000000).toFixed(2)}亿`;
+    return `${smartNumber(value / 100000000, 2)}亿`;
   }
   if (value >= 10000) {
-    return `${(value / 10000).toFixed(2)}万`;
+    return `${smartNumber(value / 10000, 2)}万`;
   }
   return value.toFixed(0);
 }
 
 /**
  * 格式化成交额（万/亿）
+ * 整数不显示 .00
  */
 export function formatAmount(value: number | null | undefined): string {
   if (value === null || value === undefined || isNaN(value)) {
     return '--';
   }
   if (value >= 100000000) {
-    return `${(value / 100000000).toFixed(2)}亿`;
+    return `${smartNumber(value / 100000000, 2)}亿`;
   }
   if (value >= 10000) {
-    return `${(value / 10000).toFixed(2)}万`;
+    return `${smartNumber(value / 10000, 2)}万`;
   }
-  return value.toFixed(2);
+  return smartNumber(value, 2);
 }
 
 /**

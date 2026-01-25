@@ -79,6 +79,7 @@ export const KLineChart = forwardRef<KLineChartRef, KLineChartProps>(function KL
     showToolbar = true,
     showPeriodSelector = true,
     showIndicatorSelector = true,
+    maxSubPanes = 3,
     visibleCount = 60,
     onDataLoad,
     onPeriodChange,
@@ -110,8 +111,8 @@ export const KLineChart = forwardRef<KLineChartRef, KLineChartProps>(function KL
 
   // 计算实际使用的面板配置
   const actualPanes = useMemo(
-    () => panes ?? getDefaultPanes(indicators),
-    [panes, indicators]
+    () => panes ?? getDefaultPanes(indicators, { maxSubPanes }),
+    [panes, indicators, maxSubPanes]
   );
 
   // 数据获取
@@ -246,8 +247,9 @@ export const KLineChart = forwardRef<KLineChartRef, KLineChartProps>(function KL
     );
 
     // 使用 replaceMerge 来保留 dataZoom 的状态（用户的缩放操作）
+    // 同时包含 title 以确保 "暂无数据" 提示能被正确清除
     setOption(mergedOption as EChartsOption, {
-      replaceMerge: ['series', 'xAxis', 'yAxis', 'grid'],
+      replaceMerge: ['series', 'xAxis', 'yAxis', 'grid', 'title'],
     });
   }, [
     data,

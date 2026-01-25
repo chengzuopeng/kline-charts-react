@@ -45,7 +45,7 @@
   },
   "dependencies": {
     "echarts": "^5.5.0",
-    "stock-sdk": "^1.0.0"
+    "stock-sdk": "^1.6.1"
   },
   "devDependencies": {
     "@types/react": "^18.3.18",
