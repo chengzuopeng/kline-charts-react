@@ -1,0 +1,70 @@
+.container {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  background: var(--kline-bg-color, #fff);
+  border-bottom: 1px solid var(--kline-border-color, #e8e8e8);
+}
+
+.group {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.divider {
+  width: 1px;
+  height: 16px;
+  margin: 0 8px;
+  background: var(--kline-border-color, #e8e8e8);
+}
+
+.spacer {
+  flex: 1;
+}
+
+.iconButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  color: var(--kline-text-color, #333);
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.iconButton:hover:not(:disabled) {
+  background: var(--kline-hover-bg, #f5f5f5);
+}
+
+.iconButton:disabled {
+  color: var(--kline-text-disabled, #ccc);
+  cursor: not-allowed;
+}
+
+.textButton {
+  padding: 4px 8px;
+  font-size: 12px;
+  color: var(--kline-text-secondary, #666);
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.textButton:hover {
+  background: var(--kline-hover-bg, #f5f5f5);
+  color: var(--kline-text-color, #333);
+}
+
+.textButton.active {
+  color: var(--kline-active-color, #1890ff);
+  background: rgba(24, 144, 255, 0.1);
+}

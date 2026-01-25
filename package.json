@@ -1,0 +1,93 @@
+{
+  "name": "kline-charts",
+  "version": "0.1.0",
+  "description": "Professional stock K-line chart React component with built-in data source, powered by ECharts and stock-sdk",
+  "author": "Your Name",
+  "license": "MIT",
+  "type": "module",
+  "main": "dist/index.cjs",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./style.css": "./dist/kline-charts.css"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "sideEffects": [
+    "*.css"
+  ],
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "lint": "eslint .",
+    "preview": "vite preview",
+    "playground": "npm --prefix playground run dev",
+    "prepublishOnly": "npm run build"
+  },
+  "peerDependencies": {
+    "react": ">=17.0.0",
+    "react-dom": ">=17.0.0"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": false
+    },
+    "react-dom": {
+      "optional": false
+    }
+  },
+  "dependencies": {
+    "echarts": "^5.5.0",
+    "stock-sdk": "^1.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "@vitejs/plugin-react": "^4.3.4",
+    "eslint": "^9.17.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "typescript": "~5.6.2",
+    "vite": "^6.0.5",
+    "vite-plugin-dts": "^4.4.0"
+  },
+  "keywords": [
+    "kline",
+    "k-line",
+    "stock",
+    "chart",
+    "echarts",
+    "react",
+    "candlestick",
+    "trading",
+    "finance",
+    "stock-chart",
+    "technical-analysis",
+    "macd",
+    "bollinger",
+    "kdj",
+    "rsi",
+    "a-share",
+    "hk-stock",
+    "us-stock"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/user/kline-charts.git"
+  },
+  "bugs": {
+    "url": "https://github.com/user/kline-charts/issues"
+  },
+  "homepage": "https://github.com/user/kline-charts#readme",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "packageManager": "yarn@1.22.22"
+}

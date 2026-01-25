@@ -1,0 +1,20 @@
+.title {
+  position: absolute;
+  left: 60px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 11px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  pointer-events: none;
+}
+
+.label {
+  font-weight: 600;
+  color: var(--kline-text-color, #333);
+}
+
+.value {
+  color: var(--kline-text-secondary, #666);
+}

@@ -1,0 +1,26 @@
+/* KLine Charts 全局样式 */
+
+/* CSS 变量（可被外部覆盖） */
+:root {
+  --kline-bg-color: #ffffff;
+  --kline-text-color: #333333;
+  --kline-text-secondary: #999999;
+  --kline-border-color: #e8e8e8;
+  --kline-active-color: #1890ff;
+  --kline-hover-bg: #f5f5f5;
+  --kline-tag-bg: #f0f0f0;
+  --kline-text-disabled: #cccccc;
+  --kline-up-color: #f5222d;
+  --kline-down-color: #52c41a;
+}
+
+/* 深色主题变量 */
+.kline-dark {
+  --kline-bg-color: #1a1a1a;
+  --kline-text-color: #d1d1d1;
+  --kline-text-secondary: #666666;
+  --kline-border-color: #333333;
+  --kline-hover-bg: #2a2a2a;
+  --kline-tag-bg: #2a2a2a;
+  --kline-text-disabled: #444444;
+}
