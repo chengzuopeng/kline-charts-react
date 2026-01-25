@@ -4,9 +4,10 @@ import { formatKlineTooltip, formatVolume } from './formatters';
 
 
 /**
- * 主图指标列表
+ * 主图指标列表（在主图显示的指标）
+ * SAR 和 KC 是主图指标
  */
-const MAIN_INDICATORS: IndicatorType[] = ['ma', 'boll'];
+const MAIN_INDICATORS: IndicatorType[] = ['ma', 'boll', 'sar', 'kc'];
 
 export const DATA_ZOOM_INSIDE_ID = 'kline-zoom-inside';
 export const DATA_ZOOM_SLIDER_ID = 'kline-zoom-slider';
@@ -94,12 +95,12 @@ export function getDefaultPanes(
   const subCount = subIndicators.length;
   const limitedSubCount = Math.min(subCount, maxSubPanes);
 
-  // 根据副图数量计算高度比例
+  // 根据副图数量计算高度比例（主图占比更大，副图更紧凑）
   const getHeights = () => {
-    if (limitedSubCount === 0) return { main: '90%', sub: '0%' };
-    if (limitedSubCount === 1) return { main: '70%', sub: '25%' };
-    if (limitedSubCount === 2) return { main: '55%', sub: '20%' };
-    return { main: '45%', sub: '15%' }; // 3个副图
+    if (limitedSubCount === 0) return { main: '95%', sub: '0%' };
+    if (limitedSubCount === 1) return { main: '78%', sub: '18%' };
+    if (limitedSubCount === 2) return { main: '65%', sub: '15%' };
+    return { main: '55%', sub: '13%' }; // 3个副图
   };
 
   const heights = getHeights();
@@ -139,7 +140,7 @@ function calculateGridLayout(panes: PaneConfig[], containerHeight: number) {
 
   const gap = 25; // 副图间距
   const topMargin = 50;
-  const bottomMargin = 30; // 为 dataZoom slider 留空间
+  const bottomMargin = 55; // 为 dataZoom slider 和日期标签留空间
   const availableHeight = containerHeight - topMargin - bottomMargin - (panes.length - 1) * gap;
 
   // 计算每个面板的高度
@@ -261,6 +262,24 @@ export function buildOption(params: {
           changePercent: item.changePercent,
           turnoverRate: item.turnoverRate,
           amplitude: item.amplitude,
+          // 传递指标数据
+          indicators,
+          // 主图指标
+          ma: item.ma,
+          boll: item.boll,
+          sar: item.sar,
+          kc: item.kc,
+          // 副图指标
+          macd: item.macd,
+          kdj: item.kdj,
+          rsi: item.rsi,
+          wr: item.wr,
+          bias: item.bias,
+          cci: item.cci,
+          atr: item.atr,
+          obv: item.obv,
+          roc: item.roc,
+          dmi: item.dmi,
         });
       },
     },
@@ -303,7 +322,8 @@ export function buildOption(params: {
       splitLine: {
         lineStyle: { color: theme.splitLineColor, type: 'dashed' as const },
       },
-      splitNumber: 3, // 减少分割线数量，让图表更清晰
+      // 主图 3 根分割线，副图 2 根
+      splitNumber: g.id === 'main' ? 3 : 2,
       scale: g.id !== 'volume' && !g.id.includes('volume'),
     })),
     dataZoom: [
@@ -317,8 +337,8 @@ export function buildOption(params: {
         id: DATA_ZOOM_SLIDER_ID,
         type: 'slider',
         xAxisIndex: gridLayouts.map((_, i) => i),
-        bottom: 5,
-        height: 15,
+        bottom: 8,
+        height: 20,
         borderColor: theme.gridLineColor,
         fillerColor: 'rgba(24,144,255,0.1)',
         handleStyle: { color: theme.activeColor },
@@ -571,6 +591,151 @@ export function buildOption(params: {
         symbol: 'none',
         lineStyle: { width: 1, color: '#1890ff' },
       });
+    }
+
+    // OBV 指标（能量潮）
+    if (pane.indicators.includes('obv')) {
+      series.push(
+        {
+          type: 'line',
+          name: 'OBV',
+          xAxisIndex: paneIndex,
+          yAxisIndex: paneIndex,
+          data: data.map((d) => d.obv?.obv ?? null),
+          symbol: 'none',
+          lineStyle: { width: 1, color: '#1890ff' },
+        },
+        {
+          type: 'line',
+          name: 'OBV_MA',
+          xAxisIndex: paneIndex,
+          yAxisIndex: paneIndex,
+          data: data.map((d) => d.obv?.obvMa ?? null),
+          symbol: 'none',
+          lineStyle: { width: 1, color: '#faad14' },
+        }
+      );
+    }
+
+    // ROC 指标（变动率）
+    if (pane.indicators.includes('roc')) {
+      series.push(
+        {
+          type: 'line',
+          name: 'ROC',
+          xAxisIndex: paneIndex,
+          yAxisIndex: paneIndex,
+          data: data.map((d) => d.roc?.roc ?? null),
+          symbol: 'none',
+          lineStyle: { width: 1, color: '#1890ff' },
+        },
+        {
+          type: 'line',
+          name: 'ROC_MA',
+          xAxisIndex: paneIndex,
+          yAxisIndex: paneIndex,
+          data: data.map((d) => d.roc?.signal ?? null),
+          symbol: 'none',
+          lineStyle: { width: 1, color: '#faad14' },
+        }
+      );
+    }
+
+    // DMI 指标（趋向指标）
+    if (pane.indicators.includes('dmi')) {
+      series.push(
+        {
+          type: 'line',
+          name: '+DI',
+          xAxisIndex: paneIndex,
+          yAxisIndex: paneIndex,
+          data: data.map((d) => d.dmi?.pdi ?? null),
+          symbol: 'none',
+          lineStyle: { width: 1, color: theme.upColor },
+        },
+        {
+          type: 'line',
+          name: '-DI',
+          xAxisIndex: paneIndex,
+          yAxisIndex: paneIndex,
+          data: data.map((d) => d.dmi?.mdi ?? null),
+          symbol: 'none',
+          lineStyle: { width: 1, color: theme.downColor },
+        },
+        {
+          type: 'line',
+          name: 'ADX',
+          xAxisIndex: paneIndex,
+          yAxisIndex: paneIndex,
+          data: data.map((d) => d.dmi?.adx ?? null),
+          symbol: 'none',
+          lineStyle: { width: 1, color: '#1890ff' },
+        },
+        {
+          type: 'line',
+          name: 'ADXR',
+          xAxisIndex: paneIndex,
+          yAxisIndex: paneIndex,
+          data: data.map((d) => d.dmi?.adxr ?? null),
+          symbol: 'none',
+          lineStyle: { width: 1, color: '#722ed1', type: 'dashed' },
+        }
+      );
+    }
+
+    // SAR 指标（抛物线转向）- 主图指标
+    if (pane.indicators.includes('sar')) {
+      series.push({
+        type: 'scatter',
+        name: 'SAR',
+        xAxisIndex: paneIndex,
+        yAxisIndex: paneIndex,
+        data: data.map((d) => ({
+          value: d.sar?.sar ?? null,
+          itemStyle: {
+            // 上升趋势用红色，下降趋势用绿色
+            color: d.sar?.trend === 1 ? theme.upColor : theme.downColor,
+          },
+        })),
+        symbol: 'circle',
+        symbolSize: 4,
+      });
+    }
+
+    // KC 指标（肯特纳通道）- 主图指标
+    if (pane.indicators.includes('kc')) {
+      series.push(
+        {
+          type: 'line',
+          name: 'KC上轨',
+          xAxisIndex: paneIndex,
+          yAxisIndex: paneIndex,
+          data: data.map((d) => d.kc?.upper ?? null),
+          smooth: true,
+          symbol: 'none',
+          lineStyle: { width: 1, color: '#52c41a' },
+        },
+        {
+          type: 'line',
+          name: 'KC中轨',
+          xAxisIndex: paneIndex,
+          yAxisIndex: paneIndex,
+          data: data.map((d) => d.kc?.mid ?? null),
+          smooth: true,
+          symbol: 'none',
+          lineStyle: { width: 1, color: '#13c2c2' },
+        },
+        {
+          type: 'line',
+          name: 'KC下轨',
+          xAxisIndex: paneIndex,
+          yAxisIndex: paneIndex,
+          data: data.map((d) => d.kc?.lower ?? null),
+          smooth: true,
+          symbol: 'none',
+          lineStyle: { width: 1, color: '#eb2f96' },
+        }
+      );
     }
   }
 

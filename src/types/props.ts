@@ -41,6 +41,11 @@ export type IndicatorType =
   | 'bias'
   | 'cci'
   | 'atr'
+  | 'obv'
+  | 'roc'
+  | 'dmi'
+  | 'sar'
+  | 'kc'
   | 'volume';
 
 /**
@@ -113,6 +118,47 @@ export interface ATROptions {
 }
 
 /**
+ * OBV 指标配置（能量潮）
+ */
+export interface OBVOptions {
+  maPeriod?: number;
+}
+
+/**
+ * ROC 指标配置（变动率）
+ */
+export interface ROCOptions {
+  period?: number;
+  signalPeriod?: number;
+}
+
+/**
+ * DMI 指标配置（趋向指标）
+ */
+export interface DMIOptions {
+  period?: number;
+  adxPeriod?: number;
+}
+
+/**
+ * SAR 指标配置（抛物线转向）
+ */
+export interface SAROptions {
+  afStart?: number;
+  afIncrement?: number;
+  afMax?: number;
+}
+
+/**
+ * KC 指标配置（肯特纳通道）
+ */
+export interface KCOptions {
+  emaPeriod?: number;
+  atrPeriod?: number;
+  multiplier?: number;
+}
+
+/**
  * 指标参数配置
  */
 export interface IndicatorOptions {
@@ -125,6 +171,11 @@ export interface IndicatorOptions {
   bias?: BIASOptions | boolean;
   cci?: CCIOptions | boolean;
   atr?: ATROptions | boolean;
+  obv?: OBVOptions | boolean;
+  roc?: ROCOptions | boolean;
+  dmi?: DMIOptions | boolean;
+  sar?: SAROptions | boolean;
+  kc?: KCOptions | boolean;
 }
 
 /**

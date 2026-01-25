@@ -110,9 +110,9 @@ export function formatDate(date: string | Date, format = 'YYYY-MM-DD'): string {
 }
 
 /**
- * 格式化 K 线 Tooltip
+ * Tooltip 数据类型
  */
-export function formatKlineTooltip(data: {
+export interface TooltipData {
   date: string;
   open: number | null;
   high: number | null;
@@ -124,7 +124,30 @@ export function formatKlineTooltip(data: {
   changePercent?: number | null;
   turnoverRate?: number | null;
   amplitude?: number | null;
-}): string {
+  // 技术指标数据
+  indicators?: string[];
+  // 主图指标
+  ma?: { ma5?: number | null; ma10?: number | null; ma20?: number | null; ma30?: number | null; ma60?: number | null };
+  boll?: { upper: number | null; mid: number | null; lower: number | null };
+  sar?: { sar: number | null; trend: number | null };
+  kc?: { upper: number | null; mid: number | null; lower: number | null };
+  // 副图指标
+  macd?: { dif: number | null; dea: number | null; macd: number | null };
+  kdj?: { k: number | null; d: number | null; j: number | null };
+  rsi?: { rsi6?: number | null; rsi12?: number | null; rsi24?: number | null };
+  wr?: { wr6?: number | null; wr10?: number | null };
+  bias?: { bias6?: number | null; bias12?: number | null; bias24?: number | null };
+  cci?: { cci: number | null };
+  atr?: { atr: number | null };
+  obv?: { obv: number | null; obvMa: number | null };
+  roc?: { roc: number | null; signal: number | null };
+  dmi?: { pdi: number | null; mdi: number | null; adx: number | null };
+}
+
+/**
+ * 格式化 K 线 Tooltip
+ */
+export function formatKlineTooltip(data: TooltipData): string {
   const lines = [
     `<div style="font-weight:bold;margin-bottom:4px">${data.date}</div>`,
     `<div>开盘: <span style="font-weight:500">${formatPrice(data.open)}</span></div>`,
@@ -155,6 +178,94 @@ export function formatKlineTooltip(data: {
 
   if (data.amplitude !== undefined && data.amplitude !== null) {
     lines.push(`<div>振幅: ${data.amplitude.toFixed(2)}%</div>`);
+  }
+
+  // 添加技术指标数据（仅显示已选择的指标）
+  const indicators = data.indicators ?? [];
+  let hasIndicatorSection = false;
+  
+  // 主图指标
+  if (indicators.includes('ma') && data.ma) {
+    if (!hasIndicatorSection) {
+      lines.push(`<div style="margin-top:4px;border-top:1px solid #eee;padding-top:4px">MA: ${formatPrice(data.ma.ma5)} / ${formatPrice(data.ma.ma10)} / ${formatPrice(data.ma.ma20)}</div>`);
+      hasIndicatorSection = true;
+    } else {
+      lines.push(`<div>MA: ${formatPrice(data.ma.ma5)} / ${formatPrice(data.ma.ma10)} / ${formatPrice(data.ma.ma20)}</div>`);
+    }
+  }
+  
+  if (indicators.includes('boll') && data.boll) {
+    if (!hasIndicatorSection) {
+      lines.push(`<div style="margin-top:4px;border-top:1px solid #eee;padding-top:4px">BOLL: 上 ${formatPrice(data.boll.upper)} 中 ${formatPrice(data.boll.mid)} 下 ${formatPrice(data.boll.lower)}</div>`);
+      hasIndicatorSection = true;
+    } else {
+      lines.push(`<div>BOLL: 上 ${formatPrice(data.boll.upper)} 中 ${formatPrice(data.boll.mid)} 下 ${formatPrice(data.boll.lower)}</div>`);
+    }
+  }
+  
+  if (indicators.includes('sar') && data.sar) {
+    const trend = data.sar.trend === 1 ? '↑' : '↓';
+    if (!hasIndicatorSection) {
+      lines.push(`<div style="margin-top:4px;border-top:1px solid #eee;padding-top:4px">SAR: ${formatPrice(data.sar.sar)} ${trend}</div>`);
+      hasIndicatorSection = true;
+    } else {
+      lines.push(`<div>SAR: ${formatPrice(data.sar.sar)} ${trend}</div>`);
+    }
+  }
+  
+  if (indicators.includes('kc') && data.kc) {
+    if (!hasIndicatorSection) {
+      lines.push(`<div style="margin-top:4px;border-top:1px solid #eee;padding-top:4px">KC: 上 ${formatPrice(data.kc.upper)} 中 ${formatPrice(data.kc.mid)} 下 ${formatPrice(data.kc.lower)}</div>`);
+      hasIndicatorSection = true;
+    } else {
+      lines.push(`<div>KC: 上 ${formatPrice(data.kc.upper)} 中 ${formatPrice(data.kc.mid)} 下 ${formatPrice(data.kc.lower)}</div>`);
+    }
+  }
+  
+  // 副图指标
+  if (indicators.includes('macd') && data.macd) {
+    if (!hasIndicatorSection) {
+      lines.push(`<div style="margin-top:4px;border-top:1px solid #eee;padding-top:4px">MACD: DIF ${formatPrice(data.macd.dif)} DEA ${formatPrice(data.macd.dea)} MACD ${formatPrice(data.macd.macd)}</div>`);
+      hasIndicatorSection = true;
+    } else {
+      lines.push(`<div>MACD: DIF ${formatPrice(data.macd.dif)} DEA ${formatPrice(data.macd.dea)} MACD ${formatPrice(data.macd.macd)}</div>`);
+    }
+  }
+  
+  if (indicators.includes('kdj') && data.kdj) {
+    lines.push(`<div>KDJ: K ${formatPrice(data.kdj.k)} D ${formatPrice(data.kdj.d)} J ${formatPrice(data.kdj.j)}</div>`);
+  }
+  
+  if (indicators.includes('rsi') && data.rsi) {
+    lines.push(`<div>RSI: ${formatPrice(data.rsi.rsi6)} / ${formatPrice(data.rsi.rsi12)} / ${formatPrice(data.rsi.rsi24)}</div>`);
+  }
+  
+  if (indicators.includes('wr') && data.wr) {
+    lines.push(`<div>WR: ${formatPrice(data.wr.wr6)} / ${formatPrice(data.wr.wr10)}</div>`);
+  }
+  
+  if (indicators.includes('bias') && data.bias) {
+    lines.push(`<div>BIAS: ${formatPrice(data.bias.bias6)} / ${formatPrice(data.bias.bias12)} / ${formatPrice(data.bias.bias24)}</div>`);
+  }
+  
+  if (indicators.includes('cci') && data.cci) {
+    lines.push(`<div>CCI: ${formatPrice(data.cci.cci)}</div>`);
+  }
+  
+  if (indicators.includes('atr') && data.atr) {
+    lines.push(`<div>ATR: ${formatPrice(data.atr.atr)}</div>`);
+  }
+  
+  if (indicators.includes('obv') && data.obv) {
+    lines.push(`<div>OBV: ${formatVolume(data.obv.obv)} MA ${formatVolume(data.obv.obvMa)}</div>`);
+  }
+  
+  if (indicators.includes('roc') && data.roc) {
+    lines.push(`<div>ROC: ${formatPrice(data.roc.roc)} SIGNAL ${formatPrice(data.roc.signal)}</div>`);
+  }
+  
+  if (indicators.includes('dmi') && data.dmi) {
+    lines.push(`<div>DMI: +DI ${formatPrice(data.dmi.pdi)} -DI ${formatPrice(data.dmi.mdi)} ADX ${formatPrice(data.dmi.adx)}</div>`);
   }
 
   return lines.join('');

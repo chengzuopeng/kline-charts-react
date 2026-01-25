@@ -4,6 +4,7 @@ import {
   CandlestickChart,
   LineChart,
   BarChart,
+  ScatterChart,
 } from 'echarts/charts';
 import {
   TitleComponent,
@@ -21,6 +22,7 @@ echarts.use([
   CandlestickChart,
   LineChart,
   BarChart,
+  ScatterChart,
   TitleComponent,
   TooltipComponent,
   GridComponent,

@@ -24,6 +24,12 @@ const BOLL_COLORS: Record<string, string> = {
   lower: '#722ed1',
 };
 
+const KC_COLORS: Record<string, string> = {
+  upper: '#52c41a',
+  mid: '#13c2c2',
+  lower: '#eb2f96',
+};
+
 /**
  * 格式化价格
  */
@@ -34,7 +40,7 @@ function formatPrice(value: number | null | undefined): string {
 
 /**
  * 主图指标数值显示组件
- * 支持 MA 和 BOLL 指标
+ * 支持 MA、BOLL、SAR、KC 指标
  */
 export function IndicatorDisplay({ data, indicators, hoverIndex }: IndicatorDisplayProps) {
   const displayData = useMemo(() => {
@@ -51,8 +57,10 @@ export function IndicatorDisplay({ data, indicators, hoverIndex }: IndicatorDisp
   // 检查是否选择了主图指标
   const showMA = indicators.includes('ma');
   const showBOLL = indicators.includes('boll');
+  const showSAR = indicators.includes('sar');
+  const showKC = indicators.includes('kc');
 
-  if (!showMA && !showBOLL) {
+  if (!showMA && !showBOLL && !showSAR && !showKC) {
     return null;
   }
 
@@ -86,6 +94,33 @@ export function IndicatorDisplay({ data, indicators, hoverIndex }: IndicatorDisp
           </span>
           <span className={styles.item} style={{ color: BOLL_COLORS.lower }}>
             LOWER: {formatPrice(displayData.boll.lower)}
+          </span>
+        </div>
+      )}
+
+      {/* SAR 指标数值 */}
+      {showSAR && displayData.sar && (
+        <div className={styles.group}>
+          <span
+            className={styles.item}
+            style={{ color: displayData.sar.trend === 1 ? '#cf1322' : '#389e0d' }}
+          >
+            SAR: {formatPrice(displayData.sar.sar)} {displayData.sar.trend === 1 ? '↑' : '↓'}
+          </span>
+        </div>
+      )}
+
+      {/* KC 指标数值 */}
+      {showKC && displayData.kc && (
+        <div className={styles.group}>
+          <span className={styles.item} style={{ color: KC_COLORS.upper }}>
+            KC上: {formatPrice(displayData.kc.upper)}
+          </span>
+          <span className={styles.item} style={{ color: KC_COLORS.mid }}>
+            KC中: {formatPrice(displayData.kc.mid)}
+          </span>
+          <span className={styles.item} style={{ color: KC_COLORS.lower }}>
+            KC下: {formatPrice(displayData.kc.lower)}
           </span>
         </div>
       )}

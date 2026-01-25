@@ -1,8 +1,8 @@
 {
   "name": "kline-charts",
-  "version": "0.1.0",
+  "version": "0.0.1",
   "description": "Professional stock K-line chart React component with built-in data source, powered by ECharts and stock-sdk",
-  "author": "Your Name",
+  "author": "chengzuopeng",
   "license": "MIT",
   "type": "module",
   "main": "dist/index.cjs",
@@ -24,12 +24,13 @@
     "*.css"
   ],
   "scripts": {
-    "dev": "vite",
+    "dev": "yarn --cwd playground dev",
     "build": "tsc -b && vite build",
+    "build:lib": "tsc -b && vite build",
+    "build:playground": "yarn --cwd playground build",
     "lint": "eslint .",
-    "preview": "vite preview",
-    "playground": "npm --prefix playground run dev",
-    "prepublishOnly": "npm run build"
+    "preview": "yarn --cwd playground preview",
+    "prepublishOnly": "yarn build"
   },
   "peerDependencies": {
     "react": ">=17.0.0",
@@ -48,6 +49,7 @@
     "stock-sdk": "^1.6.1"
   },
   "devDependencies": {
+    "@types/node": "^22.0.0",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
     "@vitejs/plugin-react": "^4.3.4",
@@ -80,12 +82,12 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/user/kline-charts.git"
+    "url": "https://github.com/chengzuopeng/kline-charts.git"
   },
   "bugs": {
-    "url": "https://github.com/user/kline-charts/issues"
+    "url": "https://github.com/chengzuopeng/kline-charts/issues"
   },
-  "homepage": "https://github.com/user/kline-charts#readme",
+  "homepage": "https://github.com/chengzuopeng/kline-charts#readme",
   "engines": {
     "node": ">=18.0.0"
   },

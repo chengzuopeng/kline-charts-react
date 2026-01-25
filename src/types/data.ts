@@ -68,6 +68,16 @@ export interface KlineWithIndicators extends KlineData {
   cci?: CCIResult;
   /** ATR 指标 */
   atr?: ATRResult;
+  /** OBV 指标（能量潮） */
+  obv?: OBVResult;
+  /** ROC 指标（变动率） */
+  roc?: ROCResult;
+  /** DMI 指标（趋向指标） */
+  dmi?: DMIResult;
+  /** SAR 指标（抛物线转向） */
+  sar?: SARResult;
+  /** KC 指标（肯特纳通道） */
+  kc?: KCResult;
 }
 
 /**
@@ -154,6 +164,52 @@ export interface CCIResult {
 export interface ATRResult {
   tr?: number | null;
   atr: number | null;
+}
+
+/**
+ * OBV 指标结果（能量潮）
+ */
+export interface OBVResult {
+  obv: number | null;
+  obvMa: number | null;
+}
+
+/**
+ * ROC 指标结果（变动率）
+ */
+export interface ROCResult {
+  roc: number | null;
+  signal: number | null;
+}
+
+/**
+ * DMI 指标结果（趋向指标）
+ */
+export interface DMIResult {
+  pdi: number | null;
+  mdi: number | null;
+  adx: number | null;
+  adxr: number | null;
+}
+
+/**
+ * SAR 指标结果（抛物线转向）
+ */
+export interface SARResult {
+  sar: number | null;
+  trend: 1 | -1 | null;
+  ep: number | null;
+  af: number | null;
+}
+
+/**
+ * KC 指标结果（肯特纳通道）
+ */
+export interface KCResult {
+  mid: number | null;
+  upper: number | null;
+  lower: number | null;
+  width: number | null;
 }
 
 /**

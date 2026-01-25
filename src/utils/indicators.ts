@@ -1,4 +1,4 @@
-import type { OHLCV, MAResult, MACDResult, BOLLResult, KDJResult, RSIResult, WRResult, BIASResult, CCIResult, ATRResult } from '@/types';
+import type { OHLCV, MAResult, MACDResult, BOLLResult, KDJResult, RSIResult, WRResult, BIASResult, CCIResult, ATRResult, OBVResult, ROCResult, DMIResult, SARResult, KCResult } from '@/types';
 
 /**
  * 计算 SMA（简单移动平均）
@@ -548,6 +548,355 @@ export function calcATR(
         result.push({ tr, atr: (prevAtr * (period - 1) + tr) / period });
       }
     }
+  }
+
+  return result;
+}
+
+/**
+ * 计算 OBV（能量潮）
+ */
+export function calcOBV(
+  data: OHLCV[],
+  options: { maPeriod?: number } = {}
+): OBVResult[] {
+  const { maPeriod = 30 } = options;
+
+  const result: OBVResult[] = [];
+  let obv = 0;
+
+  for (let i = 0; i < data.length; i++) {
+    const item = data[i];
+    if (item === undefined || item.close === null || item.volume === null || item.volume === undefined) {
+      result.push({ obv: null, obvMa: null });
+      continue;
+    }
+
+    if (i === 0) {
+      obv = item.volume;
+    } else {
+      const prevItem = data[i - 1];
+      const prevClose = prevItem !== undefined ? prevItem.close : null;
+      if (prevClose === null || prevClose === undefined) {
+        obv = item.volume;
+      } else if (item.close > prevClose) {
+        obv += item.volume;
+      } else if (item.close < prevClose) {
+        obv -= item.volume;
+      }
+      // 如果收盘价相等，OBV 不变
+    }
+
+    result.push({ obv, obvMa: null });
+  }
+
+  // 计算 OBV 的移动平均
+  const obvValues = result.map((r) => r.obv);
+  const obvMa = calcSMA(obvValues, maPeriod);
+
+  for (let i = 0; i < result.length; i++) {
+    const r = result[i];
+    if (r !== undefined) {
+      r.obvMa = obvMa[i] ?? null;
+    }
+  }
+
+  return result;
+}
+
+/**
+ * 计算 ROC（变动率）
+ */
+export function calcROC(
+  closes: (number | null)[],
+  options: { period?: number; signalPeriod?: number } = {}
+): ROCResult[] {
+  const { period = 12, signalPeriod = 6 } = options;
+
+  const roc: (number | null)[] = [];
+
+  for (let i = 0; i < closes.length; i++) {
+    const current = closes[i];
+    const prev = closes[i - period];
+    if (
+      i < period ||
+      current === null ||
+      current === undefined ||
+      prev === null ||
+      prev === undefined ||
+      prev === 0
+    ) {
+      roc.push(null);
+    } else {
+      roc.push(((current - prev) / prev) * 100);
+    }
+  }
+
+  // 计算信号线（ROC 的 EMA）
+  const signal = calcEMA(roc, signalPeriod);
+
+  const result: ROCResult[] = [];
+  for (let i = 0; i < closes.length; i++) {
+    result.push({
+      roc: roc[i] ?? null,
+      signal: signal[i] ?? null,
+    });
+  }
+
+  return result;
+}
+
+/**
+ * 计算 DMI（趋向指标）
+ */
+export function calcDMI(
+  data: OHLCV[],
+  options: { period?: number; adxPeriod?: number } = {}
+): DMIResult[] {
+  const { period = 14, adxPeriod = 14 } = options;
+
+  const result: DMIResult[] = [];
+  const trList: number[] = [];
+  const plusDMList: number[] = [];
+  const minusDMList: number[] = [];
+
+  for (let i = 0; i < data.length; i++) {
+    const item = data[i];
+    if (item === undefined || item.high === null || item.low === null || item.close === null) {
+      result.push({ pdi: null, mdi: null, adx: null, adxr: null });
+      continue;
+    }
+
+    // 计算 TR
+    let tr: number;
+    if (i === 0) {
+      tr = item.high - item.low;
+    } else {
+      const prevItem = data[i - 1];
+      const prevClose = prevItem !== undefined ? prevItem.close : null;
+      if (prevClose === null || prevClose === undefined) {
+        tr = item.high - item.low;
+      } else {
+        tr = Math.max(
+          item.high - item.low,
+          Math.abs(item.high - prevClose),
+          Math.abs(item.low - prevClose)
+        );
+      }
+    }
+    trList.push(tr);
+
+    // 计算 +DM 和 -DM
+    if (i === 0) {
+      plusDMList.push(0);
+      minusDMList.push(0);
+    } else {
+      const prevItem = data[i - 1];
+      if (prevItem === undefined || prevItem.high === null || prevItem.low === null) {
+        plusDMList.push(0);
+        minusDMList.push(0);
+      } else {
+        const upMove = item.high - prevItem.high;
+        const downMove = prevItem.low - item.low;
+
+        const plusDM = upMove > downMove && upMove > 0 ? upMove : 0;
+        const minusDM = downMove > upMove && downMove > 0 ? downMove : 0;
+
+        plusDMList.push(plusDM);
+        minusDMList.push(minusDM);
+      }
+    }
+
+    if (i < period - 1) {
+      result.push({ pdi: null, mdi: null, adx: null, adxr: null });
+      continue;
+    }
+
+    // 计算平滑的 TR、+DM、-DM
+    let smoothTR = 0;
+    let smoothPlusDM = 0;
+    let smoothMinusDM = 0;
+    for (let j = i - period + 1; j <= i; j++) {
+      smoothTR += trList[j] ?? 0;
+      smoothPlusDM += plusDMList[j] ?? 0;
+      smoothMinusDM += minusDMList[j] ?? 0;
+    }
+
+    // +DI 和 -DI
+    const pdi = smoothTR > 0 ? (smoothPlusDM / smoothTR) * 100 : 0;
+    const mdi = smoothTR > 0 ? (smoothMinusDM / smoothTR) * 100 : 0;
+
+    // DX
+    const diSum = pdi + mdi;
+    const dx = diSum > 0 ? (Math.abs(pdi - mdi) / diSum) * 100 : 0;
+
+    // 计算 ADX（DX 的平滑均值）
+    let adx: number | null = null;
+    if (i >= period - 1 + adxPeriod - 1) {
+      let dxSum = 0;
+      for (let j = i - adxPeriod + 1; j <= i; j++) {
+        const prevR = result[j];
+        if (prevR === undefined) continue;
+        // 重新计算该位置的 DX
+        let prevSmTR = 0;
+        let prevSmPlusDM = 0;
+        let prevSmMinusDM = 0;
+        for (let k = j - period + 1; k <= j; k++) {
+          prevSmTR += trList[k] ?? 0;
+          prevSmPlusDM += plusDMList[k] ?? 0;
+          prevSmMinusDM += minusDMList[k] ?? 0;
+        }
+        const prevPdi = prevSmTR > 0 ? (prevSmPlusDM / prevSmTR) * 100 : 0;
+        const prevMdi = prevSmTR > 0 ? (prevSmMinusDM / prevSmTR) * 100 : 0;
+        const prevDiSum = prevPdi + prevMdi;
+        const prevDx = prevDiSum > 0 ? (Math.abs(prevPdi - prevMdi) / prevDiSum) * 100 : 0;
+        dxSum += prevDx;
+      }
+      dxSum += dx; // 当前 dx
+      adx = dxSum / adxPeriod;
+    }
+
+    // ADXR = (当前 ADX + N 周期前 ADX) / 2
+    let adxr: number | null = null;
+    if (adx !== null && i >= period - 1 + adxPeriod - 1 + adxPeriod) {
+      const prevAdxResult = result[i - adxPeriod];
+      if (prevAdxResult !== undefined && prevAdxResult.adx !== null) {
+        adxr = (adx + prevAdxResult.adx) / 2;
+      }
+    }
+
+    result.push({ pdi, mdi, adx, adxr });
+  }
+
+  return result;
+}
+
+/**
+ * 计算 SAR（抛物线转向指标）
+ */
+export function calcSAR(
+  data: OHLCV[],
+  options: { afStart?: number; afIncrement?: number; afMax?: number } = {}
+): SARResult[] {
+  const { afStart = 0.02, afIncrement = 0.02, afMax = 0.2 } = options;
+
+  const result: SARResult[] = [];
+
+  if (data.length === 0) return result;
+
+  // 初始化
+  let trend: 1 | -1 = 1; // 1=上升趋势，-1=下降趋势
+  let sar = data[0]?.low ?? 0;
+  let ep = data[0]?.high ?? 0; // 极点价
+  let af = afStart;
+
+  for (let i = 0; i < data.length; i++) {
+    const item = data[i];
+    if (item === undefined || item.high === null || item.low === null) {
+      result.push({ sar: null, trend: null, ep: null, af: null });
+      continue;
+    }
+
+    if (i === 0) {
+      // 第一个点，初始化
+      result.push({ sar: item.low, trend: 1, ep: item.high, af: afStart });
+      sar = item.low;
+      ep = item.high;
+      trend = 1;
+      af = afStart;
+      continue;
+    }
+
+    // 更新 SAR
+    const prevSar = sar;
+    sar = prevSar + af * (ep - prevSar);
+
+    // 根据趋势调整 SAR
+    if (trend === 1) {
+      // 上升趋势：SAR 不能高于前两天的最低价
+      const prevItem1 = data[i - 1];
+      const prevItem2 = data[i - 2];
+      if (prevItem1 !== undefined && prevItem1.low !== null) {
+        sar = Math.min(sar, prevItem1.low);
+      }
+      if (prevItem2 !== undefined && prevItem2.low !== null) {
+        sar = Math.min(sar, prevItem2.low);
+      }
+
+      // 检查是否反转
+      if (item.low < sar) {
+        trend = -1;
+        sar = ep;
+        ep = item.low;
+        af = afStart;
+      } else {
+        // 更新 EP 和 AF
+        if (item.high > ep) {
+          ep = item.high;
+          af = Math.min(af + afIncrement, afMax);
+        }
+      }
+    } else {
+      // 下降趋势：SAR 不能低于前两天的最高价
+      const prevItem1 = data[i - 1];
+      const prevItem2 = data[i - 2];
+      if (prevItem1 !== undefined && prevItem1.high !== null) {
+        sar = Math.max(sar, prevItem1.high);
+      }
+      if (prevItem2 !== undefined && prevItem2.high !== null) {
+        sar = Math.max(sar, prevItem2.high);
+      }
+
+      // 检查是否反转
+      if (item.high > sar) {
+        trend = 1;
+        sar = ep;
+        ep = item.high;
+        af = afStart;
+      } else {
+        // 更新 EP 和 AF
+        if (item.low < ep) {
+          ep = item.low;
+          af = Math.min(af + afIncrement, afMax);
+        }
+      }
+    }
+
+    result.push({ sar, trend, ep, af });
+  }
+
+  return result;
+}
+
+/**
+ * 计算 KC（肯特纳通道）
+ */
+export function calcKC(
+  data: OHLCV[],
+  options: { emaPeriod?: number; atrPeriod?: number; multiplier?: number } = {}
+): KCResult[] {
+  const { emaPeriod = 20, atrPeriod = 10, multiplier = 2 } = options;
+
+  const closes = data.map((item) => item.close);
+  const ema = calcEMA(closes, emaPeriod);
+  const atr = calcATR(data, { period: atrPeriod });
+
+  const result: KCResult[] = [];
+
+  for (let i = 0; i < data.length; i++) {
+    const mid = ema[i];
+    const atrVal = atr[i]?.atr;
+
+    if (mid === null || mid === undefined || atrVal === null || atrVal === undefined) {
+      result.push({ mid: null, upper: null, lower: null, width: null });
+      continue;
+    }
+
+    const upper = mid + multiplier * atrVal;
+    const lower = mid - multiplier * atrVal;
+    const width = mid !== 0 ? ((upper - lower) / mid) * 100 : null;
+
+    result.push({ mid, upper, lower, width });
   }
 
   return result;

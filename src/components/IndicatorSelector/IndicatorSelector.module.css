@@ -29,3 +29,10 @@
   background: rgba(24, 144, 255, 0.1);
   border-color: var(--kline-active-color, #1890ff);
 }
+
+.divider {
+  width: 1px;
+  height: 20px;
+  background: var(--kline-border-color, #e8e8e8);
+  margin: 0 4px;
+}

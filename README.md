@@ -24,7 +24,7 @@
 - 🔌 **可插拔数据源** - 支持自定义 DataProvider（解决跨域/接入自有行情源/SSR）
 - 🌍 **多市场支持** - A 股、港股、美股
 - 📊 **丰富周期** - 分时、五日、日 K、周 K、月 K、分钟级 K 线
-- 📈 **技术指标** - MA/MACD/BOLL/KDJ/RSI/WR/BIAS/CCI/ATR
+- 📈 **技术指标** - MA/MACD/BOLL/KDJ/RSI/WR/BIAS/CCI/ATR/OBV/ROC/DMI/SAR/KC
 - 🎯 **交互完善** - 缩放、平移、十字准线、Tooltip、撤销/重做
 - 🖥️ **全屏模式** - 一键全屏展示
 - 🔄 **自动刷新** - 分时模式支持自动刷新数据
@@ -181,7 +181,7 @@ function App() {
 | `symbol` | `string` | **必填** | 股票代码，如 `sh600519`、`sz000001` |
 | `market` | `'A' \| 'HK' \| 'US'` | `'A'` | 市场类型 |
 | `period` | `PeriodType` | `'daily'` | K 线周期 |
-| `adjust` | `'' \| 'qfq' \| 'hfq'` | `'hfq'` | 复权类型 |
+| `adjust` | `'' \| 'qfq' \| 'hfq'` | `'qfq'` | 复权类型（前复权） |
 | `height` | `number \| string` | `500` | 图表高度 |
 | `width` | `number \| string` | `'100%'` | 图表宽度 |
 | `theme` | `'light' \| 'dark' \| ThemeConfig` | `'light'` | 主题配置 |
@@ -190,6 +190,7 @@ function App() {
 | `showToolbar` | `boolean` | `true` | 是否显示工具栏 |
 | `showPeriodSelector` | `boolean` | `true` | 是否显示周期切换 |
 | `showIndicatorSelector` | `boolean` | `true` | 是否显示指标切换 |
+| `maxSubPanes` | `number` | `3` | 最多显示几个副图，0 表示不显示副图 |
 | `visibleCount` | `number` | `60` | 初始可见 K 线数量 |
 | `dataProvider` | `KLineDataProvider` | - | 自定义数据源 |
 | `sdkOptions` | `SDKOptions` | - | stock-sdk 配置 |
@@ -233,17 +234,35 @@ type PeriodType =
 
 ```ts
 type IndicatorType =
+  // 主图指标
   | 'ma'      // 移动平均线
-  | 'macd'    // MACD
   | 'boll'    // 布林带
+  | 'sar'     // 抛物线转向（SAR）
+  | 'kc'      // 肯特纳通道（KC）
+  // 副图指标
+  | 'volume'  // 成交量
+  | 'macd'    // MACD
   | 'kdj'     // KDJ
   | 'rsi'     // RSI
-  | 'wr'      // WR
-  | 'bias'    // BIAS
-  | 'cci'     // CCI
-  | 'atr'     // ATR
-  | 'volume'; // 成交量
+  | 'wr'      // WR（威廉指标）
+  | 'bias'    // BIAS（乖离率）
+  | 'cci'     // CCI（顺势指标）
+  | 'atr'     // ATR（平均真实波幅）
+  | 'obv'     // OBV（能量潮）
+  | 'roc'     // ROC（变动率）
+  | 'dmi';    // DMI（趋向指标）
 ```
+
+**主图指标说明**：
+- **MA** - 移动平均线，显示不同周期的均线
+- **BOLL** - 布林带，由上轨、中轨、下轨组成的通道
+- **SAR** - 抛物线转向，以点状显示趋势反转信号
+- **KC** - 肯特纳通道，基于 EMA 和 ATR 的通道指标
+
+**副图指标说明**：
+- **OBV** - 能量潮，通过成交量变化预测价格趋势
+- **ROC** - 变动率，衡量价格变化的速度
+- **DMI** - 趋向指标，包含 +DI、-DI、ADX、ADXR 四条线
 
 ## 主题定制
 
@@ -341,18 +360,29 @@ kline-charts/
 
 ```bash
 # 安装依赖
-npm install
+yarn install
 
-# 启动 playground 调试
-npm run playground
+# 启动开发调试（直连本地源码，支持热更新）
+yarn dev
 
-# 构建
-npm run build
+# 构建组件库
+yarn build
+
+# 构建 playground 生产版本（使用 npm 包）
+yarn build:playground
 
 # 代码检查
-npm run lint
+yarn lint
 ```
+
+**开发模式说明**：
+- `yarn dev` 会启动 playground，直接引用 `src/` 下的源码，修改源码后自动热更新
+- 生产构建时，playground 会使用 npm 上发布的 `kline-charts` 包
+
+## 已知限制
+
+- **导出图片**：`exportImage()` 方法导出的图片仅包含 ECharts 图表内容，不包含左上角的指标数值文字（这部分是用 React 渲染在图表外部的）
 
 ## License
 
-MIT © 2024
+MIT © 2025

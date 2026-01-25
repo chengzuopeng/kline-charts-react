@@ -22,6 +22,11 @@ import {
   calcBIAS,
   calcCCI,
   calcATR,
+  calcOBV,
+  calcROC,
+  calcDMI,
+  calcSAR,
+  calcKC,
 } from '@/utils/indicators';
 import { DataCache, getTTLByPeriod } from '@/utils/cache';
 
@@ -115,7 +120,7 @@ function createDefaultProvider(sdkOptions?: SDKOptions): KLineDataProvider {
       if (['1', '5', '15', '30', '60'].includes(period)) {
         const result = await sdk.getMinuteKline(symbol, {
           period: period as '1' | '5' | '15' | '30' | '60',
-          adjust: adjust || 'hfq',
+          adjust: adjust || 'qfq',
         });
         
         let mappedData = result.map((item) => ({
@@ -155,21 +160,21 @@ function createDefaultProvider(sdkOptions?: SDKOptions): KLineDataProvider {
         case 'HK': {
           const result = await sdk.getHKHistoryKline(symbol, {
             period: klinePeriod,
-            adjust: adjust || 'hfq',
+            adjust: adjust || 'qfq',
           });
           return result;
         }
         case 'US': {
           const result = await sdk.getUSHistoryKline(symbol, {
             period: klinePeriod,
-            adjust: adjust || 'hfq',
+            adjust: adjust || 'qfq',
           });
           return result;
         }
         default: {
           const result = await sdk.getHistoryKline(symbol, {
             period: klinePeriod,
-            adjust: adjust || 'hfq',
+            adjust: adjust || 'qfq',
           });
           return result;
         }
@@ -238,6 +243,26 @@ function addIndicators(
     ? calcATR(ohlcv, typeof options.atr === 'object' ? options.atr : {})
     : null;
 
+  const obvResult = indicators.includes('obv')
+    ? calcOBV(ohlcv, typeof options.obv === 'object' ? options.obv : {})
+    : null;
+
+  const rocResult = indicators.includes('roc')
+    ? calcROC(closes, typeof options.roc === 'object' ? options.roc : {})
+    : null;
+
+  const dmiResult = indicators.includes('dmi')
+    ? calcDMI(ohlcv, typeof options.dmi === 'object' ? options.dmi : {})
+    : null;
+
+  const sarResult = indicators.includes('sar')
+    ? calcSAR(ohlcv, typeof options.sar === 'object' ? options.sar : {})
+    : null;
+
+  const kcResult = indicators.includes('kc')
+    ? calcKC(ohlcv, typeof options.kc === 'object' ? options.kc : {})
+    : null;
+
   // 合并结果
   return data.map((item, i) => ({
     ...item,
@@ -250,6 +275,11 @@ function addIndicators(
     bias: biasResult?.[i],
     cci: cciResult?.[i],
     atr: atrResult?.[i],
+    obv: obvResult?.[i],
+    roc: rocResult?.[i],
+    dmi: dmiResult?.[i],
+    sar: sarResult?.[i],
+    kc: kcResult?.[i],
   }));
 }
 

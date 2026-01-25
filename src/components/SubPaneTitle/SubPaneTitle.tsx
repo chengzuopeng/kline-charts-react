@@ -16,6 +16,8 @@ interface SubPaneTitleProps {
 const INDICATOR_LABELS: Record<IndicatorType, string> = {
   ma: 'MA',
   boll: 'BOLL',
+  sar: 'SAR',
+  kc: 'KC',
   volume: '成交量',
   macd: 'MACD',
   kdj: 'KDJ',
@@ -24,6 +26,9 @@ const INDICATOR_LABELS: Record<IndicatorType, string> = {
   bias: 'BIAS',
   cci: 'CCI',
   atr: 'ATR',
+  obv: 'OBV',
+  roc: 'ROC',
+  dmi: 'DMI',
 };
 
 /**
@@ -59,6 +64,21 @@ function getIndicatorValueText(
     case 'atr':
       if (!data.atr) return '';
       return `ATR: ${formatPrice(data.atr.atr)}`;
+    case 'obv':
+      if (!data.obv) return '';
+      return `OBV: ${formatVolume(data.obv.obv)}  MA: ${formatVolume(data.obv.obvMa)}`;
+    case 'roc':
+      if (!data.roc) return '';
+      return `ROC: ${formatPrice(data.roc.roc)}  SIGNAL: ${formatPrice(data.roc.signal)}`;
+    case 'dmi':
+      if (!data.dmi) return '';
+      return `+DI: ${formatPrice(data.dmi.pdi)}  -DI: ${formatPrice(data.dmi.mdi)}  ADX: ${formatPrice(data.dmi.adx)}`;
+    case 'sar':
+      if (!data.sar) return '';
+      return `SAR: ${formatPrice(data.sar.sar)}  ${data.sar.trend === 1 ? '↑' : '↓'}`;
+    case 'kc':
+      if (!data.kc) return '';
+      return `上: ${formatPrice(data.kc.upper)}  中: ${formatPrice(data.kc.mid)}  下: ${formatPrice(data.kc.lower)}`;
     default:
       return '';
   }
@@ -70,7 +90,7 @@ function getIndicatorValueText(
 function calculatePanePositions(panes: PaneConfig[], containerHeight: number) {
   const gap = 25; // 与 optionBuilder 保持一致
   const topMargin = 50;
-  const bottomMargin = 30; // 与 optionBuilder 保持一致
+  const bottomMargin = 55; // 与 optionBuilder 保持一致
   const availableHeight = containerHeight - topMargin - bottomMargin - (panes.length - 1) * gap;
 
   // 计算每个面板的高度

@@ -234,7 +234,7 @@ function App() {
           ref={chartRef}
           symbol={selectedStock.symbol}
           market={selectedStock.market}
-          height={650}
+          height={750}
           theme={theme}
           indicators={['ma', 'volume', 'macd']}
           autoRefresh={autoRefresh ? { intervalMs: 5000, onlyTradingTime: false } : false}
@@ -274,7 +274,7 @@ function App() {
           <li>全屏模式（工具栏右侧按钮）</li>
           <li>均线数值显示（K线模式下方显示MA5/MA10等）</li>
           <li>自动刷新（勾选上方复选框，在分时模式下生效）</li>
-          <li>技术指标：MA/MACD/BOLL/KDJ/RSI/WR/BIAS/CCI/ATR</li>
+          <li>技术指标：MA/MACD/BOLL/KDJ/RSI/WR/BIAS/CCI/ATR/OBV/ROC/DMI/SAR/KC</li>
           <li>复权切换：不复权/前复权/后复权</li>
           <li>缩放/平移/撤销/重做</li>
           <li>深色/浅色主题切换</li>

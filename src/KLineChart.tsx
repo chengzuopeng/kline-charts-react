@@ -70,7 +70,7 @@ export const KLineChart = forwardRef<KLineChartRef, KLineChartProps>(function KL
     symbol,
     market = 'A',
     period: initialPeriod = 'daily',
-    adjust: initialAdjust = 'hfq',
+    adjust: initialAdjust = 'qfq',
     height = 500,
     width = '100%',
     theme = 'light',
