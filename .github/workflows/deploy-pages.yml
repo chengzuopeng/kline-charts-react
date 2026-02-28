@@ -33,7 +33,7 @@ jobs:
         working-directory: playground
 
       - name: Build playground with local source
-        run: yarn build
+        run: npx vite build
         working-directory: playground
         env:
           USE_LOCAL_SOURCE: 'true'
