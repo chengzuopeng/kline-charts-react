@@ -238,17 +238,15 @@ function App() {
           theme={theme}
           indicators={['ma', 'volume', 'macd']}
           autoRefresh={autoRefresh ? { intervalMs: 5000, onlyTradingTime: false } : false}
-          sdkOptions={{
-            baseUrl: '/qt',
-          }}
-          onDataLoad={(data) => {
+          sdkOptions={import.meta.env.DEV ? { baseUrl: '/qt' } : undefined}
+          onDataLoad={(data: unknown[]) => {
             console.log('数据加载完成:', data.length, '条');
           }}
-          onPeriodChange={(p) => {
+          onPeriodChange={(p: PeriodType) => {
             console.log('周期切换:', p);
             setPeriod(p);
           }}
-          onError={(error) => {
+          onError={(error: Error) => {
             console.error('加载失败:', error);
           }}
         />

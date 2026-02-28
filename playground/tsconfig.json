@@ -24,9 +24,9 @@
     "baseUrl": ".",
     "paths": {
       "kline-charts-react": ["../src/index.ts"],
-      "kline-charts-react/*": ["../src/*"]
+      "kline-charts-react/*": ["../src/*"],
+      "@/*": ["../src/*"]
     }
   },
-  "include": ["src"],
-  "references": [{ "path": "../tsconfig.json" }]
+  "include": ["src", "../src"]
 }
