@@ -9,7 +9,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "kline-charts": "latest",
+    "echarts": "^5.5.0",
+    "kline-charts-react": "latest",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },

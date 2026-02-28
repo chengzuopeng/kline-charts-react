@@ -33,6 +33,11 @@ export type {
   BIASResult,
   CCIResult,
   ATRResult,
+  OBVResult,
+  ROCResult,
+  DMIResult,
+  SARResult,
+  KCResult,
   OHLCV,
   // Theme
   ThemeConfig,
@@ -67,6 +72,11 @@ export {
   calcBIAS,
   calcCCI,
   calcATR,
+  calcOBV,
+  calcROC,
+  calcDMI,
+  calcSAR,
+  calcKC,
 } from './utils/indicators';
 
 // Hooks

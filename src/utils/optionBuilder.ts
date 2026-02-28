@@ -1,5 +1,5 @@
 import type { EChartsOption } from 'echarts';
-import type { KlineWithIndicators, ThemeConfig, IndicatorType, PaneConfig } from '@/types';
+import type { KlineWithIndicators, ThemeConfig, IndicatorType, PaneConfig, IndicatorOptions } from '@/types';
 import { formatKlineTooltip, formatVolume } from './formatters';
 
 
@@ -126,10 +126,19 @@ export function getDefaultPanes(
   return panes;
 }
 
+/** 布局常量 */
+export const LAYOUT = {
+  gap: 25,
+  topMargin: 50,
+  bottomMargin: 55,
+  leftMargin: 60,
+  rightMargin: 60,
+} as const;
+
 /**
  * 计算 Grid 布局
  */
-function calculateGridLayout(panes: PaneConfig[], containerHeight: number) {
+export function calculateGridLayout(panes: PaneConfig[], containerHeight: number) {
   const grids: Array<{
     id: string;
     left: number;
@@ -138,9 +147,7 @@ function calculateGridLayout(panes: PaneConfig[], containerHeight: number) {
     height: number;
   }> = [];
 
-  const gap = 25; // 副图间距
-  const topMargin = 50;
-  const bottomMargin = 55; // 为 dataZoom slider 和日期标签留空间
+  const { gap, topMargin, bottomMargin } = LAYOUT;
   const availableHeight = containerHeight - topMargin - bottomMargin - (panes.length - 1) * gap;
 
   // 计算每个面板的高度
@@ -181,8 +188,8 @@ function calculateGridLayout(panes: PaneConfig[], containerHeight: number) {
   for (let i = 0; i < panes.length; i++) {
     grids.push({
       id: panes[i]!.id,
-      left: 60,
-      right: 60,
+      left: LAYOUT.leftMargin,
+      right: LAYOUT.rightMargin,
       top: currentTop,
       height: heights[i]!,
     });
@@ -202,6 +209,7 @@ export function buildOption(params: {
   panes?: PaneConfig[];
   visibleCount?: number;
   containerHeight?: number;
+  indicatorOptions?: IndicatorOptions;
 }): EChartsOption {
   const {
     data,
@@ -211,8 +219,11 @@ export function buildOption(params: {
     // visibleCount 参数保留用于 API 兼容性，初始缩放状态由 KLineChart 组件设置
     visibleCount: _visibleCount = 60,
     containerHeight = 500,
+    indicatorOptions,
   } = params;
   void _visibleCount; // 避免 unused variable 警告
+  const maOpts = typeof indicatorOptions?.ma === 'object' ? indicatorOptions.ma : undefined;
+  const maPeriods: number[] = maOpts?.periods ?? [5, 10, 20, 30, 60];
 
   if (data.length === 0) {
     return {
@@ -374,8 +385,7 @@ export function buildOption(params: {
 
     // MA 指标
     if (pane.indicators.includes('ma')) {
-      const periods = [5, 10, 20, 30, 60];
-      periods.forEach((period, i) => {
+      maPeriods.forEach((period, i) => {
         const maKey = `ma${period}`;
         const maData = data.map((d) => d.ma?.[maKey] ?? null);
         series.push({
@@ -396,6 +406,7 @@ export function buildOption(params: {
 
     // BOLL 指标
     if (pane.indicators.includes('boll')) {
+      const [bollUpper, bollMid, bollLower] = theme.bollColors;
       series.push(
         {
           type: 'line',
@@ -405,7 +416,7 @@ export function buildOption(params: {
           data: data.map((d) => d.boll?.upper ?? null),
           smooth: true,
           symbol: 'none',
-          lineStyle: { width: 1, color: '#faad14' },
+          lineStyle: { width: 1, color: bollUpper },
         },
         {
           type: 'line',
@@ -415,7 +426,7 @@ export function buildOption(params: {
           data: data.map((d) => d.boll?.mid ?? null),
           smooth: true,
           symbol: 'none',
-          lineStyle: { width: 1, color: '#1890ff' },
+          lineStyle: { width: 1, color: bollMid },
         },
         {
           type: 'line',
@@ -425,7 +436,7 @@ export function buildOption(params: {
           data: data.map((d) => d.boll?.lower ?? null),
           smooth: true,
           symbol: 'none',
-          lineStyle: { width: 1, color: '#722ed1' },
+          lineStyle: { width: 1, color: bollLower },
         }
       );
     }
@@ -704,6 +715,7 @@ export function buildOption(params: {
 
     // KC 指标（肯特纳通道）- 主图指标
     if (pane.indicators.includes('kc')) {
+      const [kcUpper, kcMid, kcLower] = theme.kcColors;
       series.push(
         {
           type: 'line',
@@ -713,7 +725,7 @@ export function buildOption(params: {
           data: data.map((d) => d.kc?.upper ?? null),
           smooth: true,
           symbol: 'none',
-          lineStyle: { width: 1, color: '#52c41a' },
+          lineStyle: { width: 1, color: kcUpper },
         },
         {
           type: 'line',
@@ -723,7 +735,7 @@ export function buildOption(params: {
           data: data.map((d) => d.kc?.mid ?? null),
           smooth: true,
           symbol: 'none',
-          lineStyle: { width: 1, color: '#13c2c2' },
+          lineStyle: { width: 1, color: kcMid },
         },
         {
           type: 'line',
@@ -733,7 +745,7 @@ export function buildOption(params: {
           data: data.map((d) => d.kc?.lower ?? null),
           smooth: true,
           symbol: 'none',
-          lineStyle: { width: 1, color: '#eb2f96' },
+          lineStyle: { width: 1, color: kcLower },
         }
       );
     }

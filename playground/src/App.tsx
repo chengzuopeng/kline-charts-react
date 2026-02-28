@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { KLineChart, type KLineChartRef, type MarketType, type PeriodType } from 'kline-charts';
+import { KLineChart, type KLineChartRef, type MarketType, type PeriodType } from 'kline-charts-react';
 
 const DEMO_STOCKS = [
   { symbol: 'sh600519', name: '贵州茅台', market: 'A' as MarketType },

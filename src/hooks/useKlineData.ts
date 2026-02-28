@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { StockSDK } from 'stock-sdk';
 import type {
   KlineData,
@@ -442,8 +442,11 @@ export function useKlineData(params: UseKlineDataParams): UseKlineDataResult {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [symbol, market, period, adjust, loadData, requestOptions?.debounceMs]);
 
-  // 计算带指标的数据
-  const data = addIndicators(rawData, indicators, indicatorOptions);
+  // 计算带指标的数据（仅在原始数据、指标列表或指标参数变化时重算）
+  const data = useMemo(
+    () => addIndicators(rawData, indicators, indicatorOptions),
+    [rawData, indicators, indicatorOptions]
+  );
 
   return { data, timelineData, loading, error, refresh };
 }

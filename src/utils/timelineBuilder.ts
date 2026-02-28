@@ -3,6 +3,30 @@ import type { TimelineData, ThemeConfig } from '@/types';
 import { formatPrice, formatVolume } from './formatters';
 
 /**
+ * 将任意格式颜色转为带透明度的 rgba 字符串
+ * 支持 hex (#rgb / #rrggbb)、rgb()、rgba()
+ */
+function colorWithAlpha(color: string, alpha: number): string {
+  // 已有 rgba
+  if (color.startsWith('rgba')) {
+    return color.replace(/,\s*[\d.]+\)$/, `, ${alpha})`);
+  }
+  // rgb(r, g, b) → rgba(r, g, b, alpha)
+  if (color.startsWith('rgb(')) {
+    return color.replace('rgb(', 'rgba(').replace(')', `, ${alpha})`);
+  }
+  // hex → rgba
+  let hex = color.replace('#', '');
+  if (hex.length === 3) {
+    hex = hex[0]! + hex[0]! + hex[1]! + hex[1]! + hex[2]! + hex[2]!;
+  }
+  const r = parseInt(hex.slice(0, 2), 16);
+  const g = parseInt(hex.slice(2, 4), 16);
+  const b = parseInt(hex.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+/**
  * 构建分时图 Option
  */
 export function buildTimelineOption(params: {
@@ -33,9 +57,10 @@ export function buildTimelineOption(params: {
     return d.volume - prevVol;
   });
 
-  // 计算价格范围
-  const minPrice = Math.min(...prices.filter((p) => p > 0));
-  const maxPrice = Math.max(...prices);
+  // 计算价格范围（防止所有价格为 0 或过滤后为空数组）
+  const validPrices = prices.filter((p) => p > 0);
+  const minPrice = validPrices.length > 0 ? Math.min(...validPrices) : 0;
+  const maxPrice = validPrices.length > 0 ? Math.max(...validPrices) : 0;
   const priceRange = maxPrice - minPrice;
   const pricePadding = priceRange * 0.1 || 1;
 
@@ -183,8 +208,8 @@ export function buildTimelineOption(params: {
             x2: 0,
             y2: 1,
             colorStops: [
-              { offset: 0, color: priceColor.replace(')', ', 0.3)').replace('rgb', 'rgba') },
-              { offset: 1, color: priceColor.replace(')', ', 0.05)').replace('rgb', 'rgba') },
+              { offset: 0, color: colorWithAlpha(priceColor, 0.3) },
+              { offset: 1, color: colorWithAlpha(priceColor, 0.05) },
             ],
           },
         },

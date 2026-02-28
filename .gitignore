@@ -12,6 +12,14 @@ dist
 dist-ssr
 *.local
 
+# Build cache
+tsconfig.tsbuildinfo
+*.tsbuildinfo
+
+# Package lock (project uses yarn)
+package-lock.json
+playground/package-lock.json
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
@@ -22,3 +30,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Internal docs
+stock-sdk.md

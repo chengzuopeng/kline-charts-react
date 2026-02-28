@@ -16,11 +16,11 @@ export default defineConfig({
   resolve: {
     alias: isProduction
       ? {
-          // 生产环境：不设置别名，使用 node_modules 中的 kline-charts
+          // 生产环境：不设置别名，使用 node_modules 中的 kline-charts-react
         }
       : {
           // 开发环境：直接引用本地源码，支持热更新调试
-          'kline-charts': path.resolve(__dirname, '../src/index.ts'),
+          'kline-charts-react': path.resolve(__dirname, '../src/index.ts'),
           '@': path.resolve(__dirname, '../src'),
         },
   },

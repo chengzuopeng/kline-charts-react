@@ -33,15 +33,21 @@ export default defineConfig({
       },
     },
     rollupOptions: {
-      external: ['react', 'react-dom', 'react/jsx-runtime'],
+      external: ['react', 'react-dom', 'react/jsx-runtime', 'echarts', /^echarts\//, 'stock-sdk'],
       output: {
         globals: {
           react: 'React',
           'react-dom': 'ReactDOM',
           'react/jsx-runtime': 'jsxRuntime',
+          echarts: 'echarts',
+          'echarts/core': 'echarts',
+          'echarts/charts': 'echarts',
+          'echarts/components': 'echarts',
+          'echarts/renderers': 'echarts',
+          'stock-sdk': 'StockSDK',
         },
         assetFileNames: (assetInfo) => {
-          if (assetInfo.name === 'style.css') return 'style.css';
+          if (assetInfo.name === 'style.css') return 'kline-charts-react.css';
           return assetInfo.name ?? 'assets/[name][extname]';
         },
       },

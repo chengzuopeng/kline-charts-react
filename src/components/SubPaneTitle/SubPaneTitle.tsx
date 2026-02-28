@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import type { KlineWithIndicators, IndicatorType, PaneConfig } from '@/types';
 import styles from './SubPaneTitle.module.css';
 import { formatPrice, formatVolume } from '@/utils/formatters';
+import { calculateGridLayout } from '@/utils/optionBuilder';
 
 interface SubPaneTitleProps {
   panes: PaneConfig[];
@@ -85,57 +86,11 @@ function getIndicatorValueText(
 }
 
 /**
- * 计算副图位置
+ * 计算副图位置（复用 optionBuilder 的布局计算）
  */
 function calculatePanePositions(panes: PaneConfig[], containerHeight: number) {
-  const gap = 25; // 与 optionBuilder 保持一致
-  const topMargin = 50;
-  const bottomMargin = 55; // 与 optionBuilder 保持一致
-  const availableHeight = containerHeight - topMargin - bottomMargin - (panes.length - 1) * gap;
-
-  // 计算每个面板的高度
-  const heights: number[] = [];
-  let totalPercent = 0;
-
-  for (const pane of panes) {
-    if (typeof pane.height === 'string' && pane.height.endsWith('%')) {
-      const percent = parseFloat(pane.height) / 100;
-      heights.push(percent);
-      totalPercent += percent;
-    } else if (typeof pane.height === 'number') {
-      heights.push(pane.height / availableHeight);
-      totalPercent += pane.height / availableHeight;
-    } else {
-      heights.push(0);
-    }
-  }
-
-  // 分配剩余高度
-  const unspecified = heights.filter((h) => h === 0).length;
-  if (unspecified > 0 && totalPercent < 1) {
-    const remaining = (1 - totalPercent) / unspecified;
-    for (let i = 0; i < heights.length; i++) {
-      if (heights[i] === 0) {
-        heights[i] = remaining;
-      }
-    }
-  }
-
-  // 归一化
-  const sum = heights.reduce((a, b) => a + b, 0);
-  for (let i = 0; i < heights.length; i++) {
-    heights[i] = (heights[i]! / sum) * availableHeight;
-  }
-
-  // 计算位置
-  const positions: { top: number; height: number }[] = [];
-  let currentTop = topMargin;
-  for (let i = 0; i < panes.length; i++) {
-    positions.push({ top: currentTop, height: heights[i]! });
-    currentTop += heights[i]! + gap;
-  }
-
-  return positions;
+  const grids = calculateGridLayout(panes, containerHeight);
+  return grids.map((g) => ({ top: g.top, height: g.height }));
 }
 
 /**

@@ -32,6 +32,10 @@ export interface ThemeConfig {
   areaColor: string;
   /** 选中高亮色 */
   activeColor: string;
+  /** BOLL 指标颜色 [上轨, 中轨, 下轨] */
+  bollColors: [string, string, string];
+  /** KC 指标颜色 [上轨, 中轨, 下轨] */
+  kcColors: [string, string, string];
 }
 
 /**
@@ -53,6 +57,8 @@ export const lightTheme: ThemeConfig = {
   splitLineColor: '#f0f0f0',
   areaColor: 'rgba(24,144,255,0.1)',
   activeColor: '#1890ff',
+  bollColors: ['#faad14', '#1890ff', '#722ed1'],
+  kcColors: ['#52c41a', '#13c2c2', '#eb2f96'],
 };
 
 /**
@@ -74,6 +80,8 @@ export const darkTheme: ThemeConfig = {
   splitLineColor: '#2a2a2a',
   areaColor: 'rgba(24,144,255,0.15)',
   activeColor: '#1890ff',
+  bollColors: ['#faad14', '#1890ff', '#722ed1'],
+  kcColors: ['#52c41a', '#13c2c2', '#eb2f96'],
 };
 
 /**

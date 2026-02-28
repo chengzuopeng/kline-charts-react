@@ -237,6 +237,7 @@ export const KLineChart = forwardRef<KLineChartRef, KLineChartProps>(function KL
         panes: actualPanes,
         visibleCount,
         containerHeight: chartHeight,
+        indicatorOptions,
       });
     }
 
@@ -452,12 +453,17 @@ export const KLineChart = forwardRef<KLineChartRef, KLineChartProps>(function KL
     ]
   );
 
+  // 仅在切换股票/周期/复权时重置缩放，避免数据量微变导致缩放被反复重置
+  const prevZoomKeyRef = useRef('');
   useEffect(() => {
     if (isTimelinePeriod(period) || data.length === 0) return;
+    const zoomKey = `${symbol}_${period}_${adjust}`;
+    if (zoomKey === prevZoomKeyRef.current) return;
+    prevZoomKeyRef.current = zoomKey;
     const { start, end } = getInitialZoom(data.length);
     applyZoom(start, end, false);
     resetZoom({ start, end });
-  }, [data.length, period, getInitialZoom, applyZoom, resetZoom]);
+  }, [symbol, period, adjust, data.length, getInitialZoom, applyZoom, resetZoom]);
 
   // CSS 变量
   const cssVars = useMemo(
@@ -532,7 +538,7 @@ export const KLineChart = forwardRef<KLineChartRef, KLineChartProps>(function KL
       {/* MA 数值显示 */}
       {/* 主图指标数值显示（MA/BOLL） */}
       {showIndicatorDisplay && (
-        <IndicatorDisplay data={data} indicators={indicators} hoverIndex={hoverIndex} />
+        <IndicatorDisplay data={data} indicators={indicators} hoverIndex={hoverIndex} theme={themeConfig} />
       )}
 
       {/* 图表区域 */}

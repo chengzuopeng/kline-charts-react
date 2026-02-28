@@ -35,26 +35,26 @@
 ## 安装
 
 ```bash
-npm install kline-charts
+npm install kline-charts-react
 
 # 或使用 yarn
-yarn add kline-charts
+yarn add kline-charts-react
 
 # 或使用 pnpm
-pnpm add kline-charts
+pnpm add kline-charts-react
 ```
 
 ### Peer Dependencies
 
 ```bash
-npm install react react-dom
+npm install react react-dom echarts
 ```
 
 ## 快速开始
 
 ```tsx
-import { KLineChart } from 'kline-charts';
-import 'kline-charts/style.css';
+import { KLineChart } from 'kline-charts-react';
+import 'kline-charts-react/style.css';
 
 function App() {
   return (
@@ -125,16 +125,19 @@ function App() {
 解决跨域问题或接入自有行情源：
 
 ```tsx
-import { KLineChart, type KLineDataProvider } from 'kline-charts';
+import { KLineChart, type KLineDataProvider } from 'kline-charts-react';
 
 const customProvider: KLineDataProvider = {
+  // K 线数据（必须实现）
   getKline: async (params, signal) => {
-    const res = await fetch(`/api/kline?symbol=${params.symbol}`, { signal });
-    return res.json();
+    // params: { symbol, market, period, adjust }
+    const res = await fetch(`/api/kline?symbol=${params.symbol}&period=${params.period}`, { signal });
+    return res.json(); // 返回 KlineData[]
   },
+  // 分时数据（可选，仅分时模式使用）
   getTimeline: async (params, signal) => {
     const res = await fetch(`/api/timeline?symbol=${params.symbol}`, { signal });
-    return res.json();
+    return res.json(); // 返回 TimelineData[]
   },
 };
 
@@ -144,11 +147,47 @@ const customProvider: KLineDataProvider = {
 />
 ```
 
+#### KlineData 数据结构
+
+`getKline` 需要返回 `KlineData[]`，每条数据的字段如下：
+
+```ts
+interface KlineData {
+  date: string;              // 日期/时间，如 "2024-01-15" 或 "2024-01-15 09:35"
+  open: number | null;       // 开盘价
+  close: number | null;      // 收盘价
+  high: number | null;       // 最高价
+  low: number | null;        // 最低价
+  volume: number | null;     // 成交量
+  amount: number | null;     // 成交额
+  changePercent?: number;    // 涨跌幅（可选）
+  change?: number;           // 涨跌额（可选）
+  amplitude?: number;        // 振幅（可选）
+  turnoverRate?: number;     // 换手率（可选）
+}
+```
+
+#### TimelineData 数据结构
+
+`getTimeline` 需要返回 `TimelineData[]`，用于分时图展示：
+
+```ts
+interface TimelineData {
+  time: string;       // 时间，如 "09:30"
+  price: number;      // 当前价格
+  volume: number;     // 累计成交量
+  amount: number;     // 累计成交额
+  avgPrice: number;   // 均价
+}
+```
+
+> 技术指标（MA、MACD、KDJ 等）会由组件自动根据 K 线数据计算，无需在数据源中提供。
+
 ### 使用 Ref 控制图表
 
 ```tsx
 import { useRef } from 'react';
-import { KLineChart, type KLineChartRef } from 'kline-charts';
+import { KLineChart, type KLineChartRef } from 'kline-charts-react';
 
 function App() {
   const chartRef = useRef<KLineChartRef>(null);
@@ -333,27 +372,30 @@ export default {
 ## 目录结构
 
 ```
-kline-charts/
+kline-charts-react/
 ├── src/
-│   ├── components/       # 子组件
-│   │   ├── Loading/
-│   │   ├── PeriodSelector/
-│   │   ├── IndicatorSelector/
-│   │   ├── Toolbar/
-│   │   └── MADisplay/
-│   ├── hooks/            # React Hooks
-│   │   ├── useKlineData.ts
-│   │   ├── useEcharts.ts
-│   │   └── useZoomHistory.ts
-│   ├── utils/            # 工具函数
-│   │   ├── indicators.ts
-│   │   ├── optionBuilder.ts
-│   │   └── timelineBuilder.ts
-│   ├── types/            # 类型定义
-│   ├── KLineChart.tsx    # 主组件
-│   └── index.ts          # 入口
-├── playground/           # 调试环境
-└── dist/                 # 构建产物
+│   ├── components/           # 子组件
+│   │   ├── Loading/          # 加载状态
+│   │   ├── PeriodSelector/   # 周期切换
+│   │   ├── IndicatorSelector/# 指标选择器
+│   │   ├── Toolbar/          # 工具栏
+│   │   ├── IndicatorDisplay/ # 主图指标数值
+│   │   └── SubPaneTitle/     # 副图标题
+│   ├── hooks/                # React Hooks
+│   │   ├── useKlineData.ts   # 数据获取 & 指标计算
+│   │   ├── useEcharts.ts     # ECharts 实例管理
+│   │   └── useZoomHistory.ts # 缩放历史
+│   ├── utils/                # 工具函数
+│   │   ├── indicators.ts     # 技术指标计算
+│   │   ├── optionBuilder.ts  # K 线 ECharts 配置
+│   │   ├── timelineBuilder.ts# 分时图 ECharts 配置
+│   │   ├── formatters.ts     # 数据格式化
+│   │   └── cache.ts          # 数据缓存
+│   ├── types/                # 类型定义
+│   ├── KLineChart.tsx        # 主组件
+│   └── index.ts              # 入口
+├── playground/               # 调试环境
+└── dist/                     # 构建产物
 ```
 
 ## 开发
@@ -377,7 +419,7 @@ yarn lint
 
 **开发模式说明**：
 - `yarn dev` 会启动 playground，直接引用 `src/` 下的源码，修改源码后自动热更新
-- 生产构建时，playground 会使用 npm 上发布的 `kline-charts` 包
+- 生产构建时，playground 会使用 npm 上发布的 `kline-charts-react` 包
 
 ## 已知限制
 

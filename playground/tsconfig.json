@@ -23,8 +23,8 @@
     /* Paths */
     "baseUrl": ".",
     "paths": {
-      "kline-charts": ["../src/index.ts"],
-      "kline-charts/*": ["../src/*"]
+      "kline-charts-react": ["../src/index.ts"],
+      "kline-charts-react/*": ["../src/*"]
     }
   },
   "include": ["src"],
