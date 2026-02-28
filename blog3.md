@@ -16,7 +16,7 @@
 
 项目名叫 **kline-charts-react**，MIT 开源。
 
-[GitHub](https://github.com/chengzuopeng/kline-charts) | [npm](https://www.npmjs.com/package/kline-charts-react)
+[GitHub](https://github.com/chengzuopeng/kline-charts-react) | [npm](https://www.npmjs.com/package/kline-charts-react)
 
 上手非常简单：
 
@@ -198,7 +198,7 @@ Star 随缘，但如果你点了，那我掉的那些头发就算没白掉。
 
 ---
 
-- GitHub: https://github.com/chengzuopeng/kline-charts
+- GitHub: https://github.com/chengzuopeng/kline-charts-react
 - npm: https://www.npmjs.com/package/kline-charts-react
 - stock-sdk 文档: https://stock-sdk.linkdiary.cn/
 - License: MIT

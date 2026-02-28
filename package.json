@@ -87,12 +87,12 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/chengzuopeng/kline-charts.git"
+    "url": "https://github.com/chengzuopeng/kline-charts-react.git"
   },
   "bugs": {
-    "url": "https://github.com/chengzuopeng/kline-charts/issues"
+    "url": "https://github.com/chengzuopeng/kline-charts-react/issues"
   },
-  "homepage": "https://github.com/chengzuopeng/kline-charts#readme",
+  "homepage": "https://github.com/chengzuopeng/kline-charts-react#readme",
   "engines": {
     "node": ">=18.0.0"
   },

@@ -22,7 +22,7 @@
 
 ## kline-charts-react
 
-[GitHub](https://github.com/chengzuopeng/kline-charts) | [npm](https://www.npmjs.com/package/kline-charts-react)
+[GitHub](https://github.com/chengzuopeng/kline-charts-react) | [npm](https://www.npmjs.com/package/kline-charts-react)
 
 直接看效果，最简使用就这么几行：
 
@@ -215,7 +215,7 @@ yarn add react react-dom echarts
 
 ---
 
-- GitHub: https://github.com/chengzuopeng/kline-charts
+- GitHub: https://github.com/chengzuopeng/kline-charts-react
 - npm: https://www.npmjs.com/package/kline-charts-react
 - stock-sdk 文档: https://stock-sdk.linkdiary.cn/
 - License: MIT

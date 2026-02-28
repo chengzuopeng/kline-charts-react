@@ -22,7 +22,7 @@
 
 项目叫 **kline-charts-react**，已经发到 npm 上了。
 
-[GitHub](https://github.com/chengzuopeng/kline-charts) | [npm](https://www.npmjs.com/package/kline-charts-react)
+[GitHub](https://github.com/chengzuopeng/kline-charts-react) | [npm](https://www.npmjs.com/package/kline-charts-react)
 
 最简单的用法，五行代码搞定：
 
@@ -215,7 +215,7 @@ echarts 是 peerDependency，你项目里已经有的话就不用重复安装了
 
 ---
 
-- GitHub: https://github.com/chengzuopeng/kline-charts
+- GitHub: https://github.com/chengzuopeng/kline-charts-react
 - npm: https://www.npmjs.com/package/kline-charts-react
 - stock-sdk 文档: https://stock-sdk.linkdiary.cn/
 - License: MIT

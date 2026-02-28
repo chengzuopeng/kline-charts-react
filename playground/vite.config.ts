@@ -11,7 +11,7 @@ const useLocalSource = !isProduction || process.env.USE_LOCAL_SOURCE === 'true';
 const isGitHubPages = process.env.GITHUB_PAGES === 'true';
 
 export default defineConfig({
-  base: isGitHubPages ? '/kline-charts/' : '/',
+  base: isGitHubPages ? '/kline-charts-react/' : '/',
   plugins: [react()],
   resolve: {
     alias: useLocalSource
