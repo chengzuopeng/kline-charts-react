@@ -16,9 +16,9 @@ export type {
   GetTimelineParams,
   RequestOptions,
   AutoRefreshOptions,
-  TimeAxisOptions,
   EChartsOptionMergeOptions,
   PaneConfig,
+  VisibleRange,
   SDKOptions,
   // Data
   KlineData,
@@ -78,12 +78,6 @@ export {
   calcSAR,
   calcKC,
 } from './utils/indicators';
-
-// Hooks
-export { useKlineData, useEcharts, useZoomHistory } from './hooks';
-
-// 子组件（可选使用）
-export { Loading, PeriodSelector, IndicatorSelector, Toolbar } from './components';
 
 // 样式
 import './styles/index.css';

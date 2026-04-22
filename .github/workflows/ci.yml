@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: yarn
+
+      - name: Install root dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Install playground dependencies
+        run: yarn install
+        working-directory: playground
+
+      - name: Lint
+        run: yarn lint
+
+      - name: Typecheck
+        run: yarn typecheck
+
+      - name: Test
+        run: yarn test:run
+
+      - name: Build library
+        run: yarn build
+
+      - name: Build playground
+        run: yarn build:playground
+
+      - name: Pack check
+        run: yarn pack:check

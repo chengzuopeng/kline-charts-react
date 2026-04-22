@@ -13,7 +13,7 @@ export default defineConfig({
     dts({
       insertTypesEntry: true,
       include: ['src'],
-      exclude: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
+      exclude: ['src/**/*.test.ts', 'src/**/*.test.tsx', 'src/test/**', 'src/vitest-env.d.ts'],
     }),
   ],
   resolve: {
@@ -23,13 +23,16 @@ export default defineConfig({
   },
   build: {
     lib: {
-      entry: path.resolve(__dirname, 'src/index.ts'),
-      name: 'KLineCharts',
-      formats: ['es', 'cjs', 'umd'],
-      fileName: (format) => {
-        if (format === 'es') return 'index.js';
-        if (format === 'cjs') return 'index.cjs';
-        return 'index.umd.js';
+      entry: {
+        index: path.resolve(__dirname, 'src/index.ts'),
+        unstable: path.resolve(__dirname, 'src/unstable.ts'),
+      },
+      formats: ['es', 'cjs'],
+      fileName: (format, entryName) => {
+        if (entryName === 'unstable') {
+          return format === 'es' ? 'unstable.js' : 'unstable.cjs';
+        }
+        return format === 'es' ? 'index.js' : 'index.cjs';
       },
     },
     rollupOptions: {

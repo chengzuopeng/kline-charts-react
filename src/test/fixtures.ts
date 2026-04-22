@@ -1,0 +1,65 @@
+import type { KlineData, TimelineData } from '@/types';
+
+export const sampleKlineData: KlineData[] = [
+  {
+    date: '2024-01-01',
+    open: 10,
+    close: 11,
+    high: 12,
+    low: 9.5,
+    volume: 1000,
+    amount: 10000,
+    change: 1,
+    changePercent: 10,
+  },
+  {
+    date: '2024-01-02',
+    open: 11,
+    close: 10.5,
+    high: 11.5,
+    low: 10,
+    volume: 1500,
+    amount: 15000,
+    change: -0.5,
+    changePercent: -4.55,
+  },
+  {
+    date: '2024-01-03',
+    open: 10.5,
+    close: 12,
+    high: 12.2,
+    low: 10.4,
+    volume: 1800,
+    amount: 21000,
+    change: 1.5,
+    changePercent: 14.29,
+  },
+  {
+    date: '2024-01-04',
+    open: 12,
+    close: 12.5,
+    high: 12.8,
+    low: 11.8,
+    volume: 2000,
+    amount: 25000,
+    change: 0.5,
+    changePercent: 4.17,
+  },
+  {
+    date: '2024-01-05',
+    open: 12.5,
+    close: 13,
+    high: 13.2,
+    low: 12.4,
+    volume: 2200,
+    amount: 28000,
+    change: 0.5,
+    changePercent: 4,
+  },
+];
+
+export const sampleTimelineData: TimelineData[] = [
+  { time: '09:30', price: 10, volume: 1000, amount: 10000, avgPrice: 10 },
+  { time: '09:31', price: 10.2, volume: 1400, amount: 14080, avgPrice: 10.1 },
+  { time: '09:32', price: 10.1, volume: 1800, amount: 18120, avgPrice: 10.1 },
+];

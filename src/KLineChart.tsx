@@ -15,6 +15,7 @@ import type {
   IndicatorType,
   AdjustType,
   AutoRefreshOptions,
+  VisibleRange,
 } from '@/types';
 import { getTheme } from '@/types/theme';
 import { useKlineData, useEcharts, useZoomHistory } from '@/hooks';
@@ -26,6 +27,8 @@ import {
   DATA_ZOOM_SLIDER_ID,
 } from '@/utils/optionBuilder';
 import { buildTimelineOption } from '@/utils/timelineBuilder';
+import { useControllableValue } from '@/utils/controllable';
+import { isMarketTradingTime } from '@/utils/marketSessions';
 import { Loading, PeriodSelector, IndicatorSelector, Toolbar, IndicatorDisplay, SubPaneTitle } from '@/components';
 import styles from './KLineChart.module.css';
 
@@ -34,29 +37,6 @@ import styles from './KLineChart.module.css';
  */
 function isTimelinePeriod(period: PeriodType): boolean {
   return period === 'timeline' || period === 'timeline5';
-}
-
-/**
- * 判断是否为交易时间（A股）
- */
-function isTradingTime(): boolean {
-  const now = new Date();
-  const day = now.getDay();
-  // 周末不交易
-  if (day === 0 || day === 6) return false;
-  
-  const hours = now.getHours();
-  const minutes = now.getMinutes();
-  const time = hours * 60 + minutes;
-  
-  // 9:30-11:30 或 13:00-15:00
-  const morningStart = 9 * 60 + 30;
-  const morningEnd = 11 * 60 + 30;
-  const afternoonStart = 13 * 60;
-  const afternoonEnd = 15 * 60;
-  
-  return (time >= morningStart && time <= morningEnd) || 
-         (time >= afternoonStart && time <= afternoonEnd);
 }
 
 /**
@@ -69,12 +49,15 @@ export const KLineChart = forwardRef<KLineChartRef, KLineChartProps>(function KL
   const {
     symbol,
     market = 'A',
-    period: initialPeriod = 'daily',
-    adjust: initialAdjust = 'qfq',
+    period: controlledPeriod,
+    defaultPeriod = 'daily',
+    adjust: controlledAdjust,
+    defaultAdjust = 'qfq',
     height = 500,
     width = '100%',
     theme = 'light',
-    indicators: initialIndicators = ['ma', 'volume', 'macd'],
+    indicators: controlledIndicators,
+    defaultIndicators = ['ma', 'volume', 'macd'],
     indicatorOptions,
     showToolbar = true,
     showPeriodSelector = true,
@@ -83,6 +66,9 @@ export const KLineChart = forwardRef<KLineChartRef, KLineChartProps>(function KL
     visibleCount = 60,
     onDataLoad,
     onPeriodChange,
+    onAdjustChange,
+    onIndicatorsChange,
+    onVisibleRangeChange,
     onError,
     dataProvider,
     sdkOptions,
@@ -96,15 +82,30 @@ export const KLineChart = forwardRef<KLineChartRef, KLineChartProps>(function KL
   } = props;
 
   // 内部状态
-  const [period, setPeriod] = useState<PeriodType>(initialPeriod);
-  const [adjust, setAdjust] = useState<AdjustType>(initialAdjust);
-  const [indicators, setIndicators] = useState<IndicatorType[]>(initialIndicators);
+  const [period, setPeriod] = useControllableValue({
+    value: controlledPeriod,
+    defaultValue: defaultPeriod,
+    onChange: onPeriodChange,
+  });
+  const [adjust, setAdjust] = useControllableValue({
+    value: controlledAdjust,
+    defaultValue: defaultAdjust,
+    onChange: onAdjustChange,
+  });
+  const [indicators, setIndicators] = useControllableValue({
+    value: controlledIndicators,
+    defaultValue: defaultIndicators,
+    onChange: onIndicatorsChange,
+  });
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
 
   // Refs
   const containerRef = useRef<HTMLDivElement>(null);
   const autoRefreshTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const suppressedZoomRangeRef = useRef<VisibleRange | null>(null);
+  const hasReportedVisibleRangeRef = useRef(false);
+  const previousVisibleRangeRef = useRef<VisibleRange | null>(null);
 
   // 主题配置
   const themeConfig = useMemo(() => getTheme(theme), [theme]);
@@ -129,7 +130,7 @@ export const KLineChart = forwardRef<KLineChartRef, KLineChartProps>(function KL
   });
 
   // ECharts 实例
-  const { chartRef, setOption, getDataURL, bindEvent } = useEcharts();
+  const { chartRef, setOption, getInstance, getDataURL, bindEvent } = useEcharts();
 
   // 缩放历史
   const { canUndo, canRedo, currentState, pushState, undo, redo, reset: resetZoom } = useZoomHistory();
@@ -157,7 +158,7 @@ export const KLineChart = forwardRef<KLineChartRef, KLineChartProps>(function KL
     observer.observe(chartEl);
     
     return () => observer.disconnect();
-  }, []);
+  }, [chartRef]);
   
 
   // 解析自动刷新配置
@@ -183,7 +184,7 @@ export const KLineChart = forwardRef<KLineChartRef, KLineChartProps>(function KL
     const { intervalMs = 5000, onlyTradingTime = true } = autoRefreshConfig;
 
     autoRefreshTimerRef.current = setInterval(() => {
-      if (onlyTradingTime && !isTradingTime()) return;
+      if (onlyTradingTime && !isMarketTradingTime(market)) return;
       refresh();
     }, intervalMs);
 
@@ -192,7 +193,7 @@ export const KLineChart = forwardRef<KLineChartRef, KLineChartProps>(function KL
         clearInterval(autoRefreshTimerRef.current);
       }
     };
-  }, [autoRefreshConfig, period, refresh]);
+  }, [autoRefreshConfig, market, period, refresh]);
 
   // 监听 hover 事件获取数据索引
   useEffect(() => {
@@ -212,6 +213,63 @@ export const KLineChart = forwardRef<KLineChartRef, KLineChartProps>(function KL
       unbindLeave();
     };
   }, [bindEvent]);
+
+  const getCurrentVisibleRange = useCallback((): VisibleRange => {
+    const option = getInstance()?.getOption();
+    const zoomOptions = option?.dataZoom as Array<{ id?: string; start?: number; end?: number }> | undefined;
+    const currentZoom =
+      zoomOptions?.find((item) => item.id === DATA_ZOOM_INSIDE_ID) ??
+      zoomOptions?.find((item) => item.id === DATA_ZOOM_SLIDER_ID) ??
+      zoomOptions?.[0];
+
+    return {
+      start: Number(currentZoom?.start ?? currentState.start),
+      end: Number(currentZoom?.end ?? currentState.end),
+    };
+  }, [currentState.end, currentState.start, getInstance]);
+
+  useEffect(() => {
+    const unbind = bindEvent('datazoom', () => {
+      const range = getCurrentVisibleRange();
+      const suppressedRange = suppressedZoomRangeRef.current;
+
+      if (
+        suppressedRange &&
+        suppressedRange.start === range.start &&
+        suppressedRange.end === range.end
+      ) {
+        suppressedZoomRangeRef.current = null;
+        return;
+      }
+
+      suppressedZoomRangeRef.current = null;
+      pushState(range);
+    });
+
+    return unbind;
+  }, [bindEvent, getCurrentVisibleRange, pushState]);
+
+  useEffect(() => {
+    if (!onVisibleRangeChange) {
+      return;
+    }
+
+    if (!hasReportedVisibleRangeRef.current) {
+      hasReportedVisibleRangeRef.current = true;
+      previousVisibleRangeRef.current = currentState;
+      return;
+    }
+
+    if (
+      previousVisibleRangeRef.current?.start === currentState.start &&
+      previousVisibleRangeRef.current?.end === currentState.end
+    ) {
+      return;
+    }
+
+    previousVisibleRangeRef.current = currentState;
+    onVisibleRangeChange(currentState);
+  }, [currentState, onVisibleRangeChange]);
 
   // 构建并设置图表配置
   useEffect(() => {
@@ -247,10 +305,21 @@ export const KLineChart = forwardRef<KLineChartRef, KLineChartProps>(function KL
       echartsOptionMerge?.mode
     );
 
+    const replaceMerge = Array.from(
+      new Set([
+        'series',
+        'xAxis',
+        'yAxis',
+        'grid',
+        'title',
+        ...(echartsOptionMerge?.replaceMerge ?? []),
+      ])
+    );
+
     // 使用 replaceMerge 来保留 dataZoom 的状态（用户的缩放操作）
     // 同时包含 title 以确保 "暂无数据" 提示能被正确清除
     setOption(mergedOption as EChartsOption, {
-      replaceMerge: ['series', 'xAxis', 'yAxis', 'grid', 'title'],
+      replaceMerge,
     });
   }, [
     data,
@@ -262,6 +331,7 @@ export const KLineChart = forwardRef<KLineChartRef, KLineChartProps>(function KL
     chartHeight,
     echartsOption,
     echartsOptionMerge,
+    indicatorOptions,
     setOption,
     loading,
     period,
@@ -284,27 +354,31 @@ export const KLineChart = forwardRef<KLineChartRef, KLineChartProps>(function KL
   // 周期切换
   const handlePeriodChange = useCallback(
     (newPeriod: PeriodType) => {
+      if (newPeriod === period) return;
       setPeriod(newPeriod);
-      resetZoom();
-      onPeriodChange?.(newPeriod);
     },
-    [onPeriodChange, resetZoom]
+    [period, setPeriod]
   );
 
   // 复权切换
   const handleAdjustChange = useCallback((newAdjust: AdjustType) => {
+    if (newAdjust === adjust) return;
     setAdjust(newAdjust);
-  }, []);
+  }, [adjust, setAdjust]);
 
   // 指标切换
   const handleIndicatorsChange = useCallback((newIndicators: IndicatorType[]) => {
     setIndicators(newIndicators);
-  }, []);
+  }, [setIndicators]);
 
   const applyZoom = useCallback(
     (start: number, end: number, commit = true) => {
       const safeStart = Math.max(0, Math.min(100, start));
       const safeEnd = Math.max(safeStart, Math.min(100, end));
+
+      if (!commit) {
+        suppressedZoomRangeRef.current = { start: safeStart, end: safeEnd };
+      }
 
       setOption({
         dataZoom: [
@@ -432,24 +506,30 @@ export const KLineChart = forwardRef<KLineChartRef, KLineChartProps>(function KL
     () => ({
       refresh,
       setPeriod: handlePeriodChange,
+      setAdjust: handleAdjustChange,
       setIndicators: handleIndicatorsChange,
       zoomTo: (start: number, end: number) => {
         applyZoom(start, end);
       },
       resetZoom: handleReset,
-      getEchartsInstance: () => chartRef.current,
-      exportImage: (type?: 'png' | 'jpeg') => getDataURL({ type }),
+      getVisibleRange: () => currentState,
+      getEchartsInstance: () => getInstance(),
+      exportImage: (type?: 'png' | 'jpeg') =>
+        getDataURL({ type, backgroundColor: themeConfig.backgroundColor }),
       getData: () => data,
     }),
     [
       refresh,
       handlePeriodChange,
+      handleAdjustChange,
       handleIndicatorsChange,
       handleReset,
       applyZoom,
-      chartRef,
+      currentState,
+      getInstance,
       getDataURL,
       data,
+      themeConfig.backgroundColor,
     ]
   );
 
@@ -482,7 +562,10 @@ export const KLineChart = forwardRef<KLineChartRef, KLineChartProps>(function KL
   );
 
   // 判断是否显示主图指标数值（MA 或 BOLL）
-  const showIndicatorDisplay = (indicators.includes('ma') || indicators.includes('boll')) && !isTimelinePeriod(period) && data.length > 0;
+  const showIndicatorDisplay =
+    indicators.some((indicator) => ['ma', 'boll', 'sar', 'kc'].includes(indicator)) &&
+    !isTimelinePeriod(period) &&
+    data.length > 0;
 
   return (
     <div
@@ -570,7 +653,7 @@ export const KLineChart = forwardRef<KLineChartRef, KLineChartProps>(function KL
 
       {/* 指标选择器（分时模式不显示） */}
       {showIndicatorSelector && !isTimelinePeriod(period) && (
-        <IndicatorSelector value={indicators} onChange={handleIndicatorsChange} />
+        <IndicatorSelector value={indicators} onChange={handleIndicatorsChange} maxSubPanes={maxSubPanes} />
       )}
     </div>
   );

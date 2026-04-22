@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import type { KlineWithIndicators, IndicatorType, PaneConfig } from '@/types';
 import styles from './SubPaneTitle.module.css';
 import { formatPrice, formatVolume } from '@/utils/formatters';
+import { formatMetricLabel, getMetricEntries } from '@/utils/indicatorMeta';
 import { calculateGridLayout } from '@/utils/optionBuilder';
 
 interface SubPaneTitleProps {
@@ -52,13 +53,19 @@ function getIndicatorValueText(
       return `K: ${formatPrice(data.kdj.k)}  D: ${formatPrice(data.kdj.d)}  J: ${formatPrice(data.kdj.j)}`;
     case 'rsi':
       if (!data.rsi) return '';
-      return `RSI6: ${formatPrice(data.rsi.rsi6)}  RSI12: ${formatPrice(data.rsi.rsi12)}  RSI24: ${formatPrice(data.rsi.rsi24)}`;
+      return getMetricEntries(data.rsi, 'rsi')
+        .map(([key, value]) => `${formatMetricLabel(key)}: ${formatPrice(value)}`)
+        .join('  ');
     case 'wr':
       if (!data.wr) return '';
-      return `WR6: ${formatPrice(data.wr.wr6)}  WR10: ${formatPrice(data.wr.wr10)}`;
+      return getMetricEntries(data.wr, 'wr')
+        .map(([key, value]) => `${formatMetricLabel(key)}: ${formatPrice(value)}`)
+        .join('  ');
     case 'bias':
       if (!data.bias) return '';
-      return `BIAS6: ${formatPrice(data.bias.bias6)}  BIAS12: ${formatPrice(data.bias.bias12)}  BIAS24: ${formatPrice(data.bias.bias24)}`;
+      return getMetricEntries(data.bias, 'bias')
+        .map(([key, value]) => `${formatMetricLabel(key)}: ${formatPrice(value)}`)
+        .join('  ');
     case 'cci':
       if (!data.cci) return '';
       return `CCI: ${formatPrice(data.cci.cci)}`;
@@ -115,11 +122,15 @@ export function SubPaneTitle({ panes, data, hoverIndex, containerHeight }: SubPa
   return (
     <>
       {subPanes.map((pane, index) => {
-        const indicator = pane.indicators[0];
-        if (!indicator) return null;
+        if (pane.indicators.length === 0) return null;
 
-        const label = INDICATOR_LABELS[indicator] || indicator.toUpperCase();
-        const valueText = getIndicatorValueText(indicator, displayData);
+        const label = pane.indicators
+          .map((indicator) => INDICATOR_LABELS[indicator] || indicator.toUpperCase())
+          .join(' / ');
+        const valueText = pane.indicators
+          .map((indicator) => getIndicatorValueText(indicator, displayData))
+          .filter(Boolean)
+          .join(' | ');
         const position = subPositions[index];
 
         return (

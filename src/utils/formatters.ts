@@ -1,3 +1,5 @@
+import { formatMetricLabel, getMetricEntries } from './indicatorMeta';
+
 /**
  * 格式化数字（千分位）
  */
@@ -127,21 +129,36 @@ export interface TooltipData {
   // 技术指标数据
   indicators?: string[];
   // 主图指标
-  ma?: { ma5?: number | null; ma10?: number | null; ma20?: number | null; ma30?: number | null; ma60?: number | null };
+  ma?: Record<string, number | null | undefined>;
   boll?: { upper: number | null; mid: number | null; lower: number | null };
   sar?: { sar: number | null; trend: number | null };
   kc?: { upper: number | null; mid: number | null; lower: number | null };
   // 副图指标
   macd?: { dif: number | null; dea: number | null; macd: number | null };
   kdj?: { k: number | null; d: number | null; j: number | null };
-  rsi?: { rsi6?: number | null; rsi12?: number | null; rsi24?: number | null };
-  wr?: { wr6?: number | null; wr10?: number | null };
-  bias?: { bias6?: number | null; bias12?: number | null; bias24?: number | null };
+  rsi?: Record<string, number | null | undefined>;
+  wr?: Record<string, number | null | undefined>;
+  bias?: Record<string, number | null | undefined>;
   cci?: { cci: number | null };
   atr?: { atr: number | null };
   obv?: { obv: number | null; obvMa: number | null };
   roc?: { roc: number | null; signal: number | null };
   dmi?: { pdi: number | null; mdi: number | null; adx: number | null };
+}
+
+function formatMetricRecord(
+  label: string,
+  record: Record<string, number | null | undefined> | undefined,
+  prefix: string
+): string | null {
+  const entries = getMetricEntries(record, prefix);
+  if (entries.length === 0) {
+    return null;
+  }
+
+  return `${label}: ${entries
+    .map(([key, value]) => `${formatMetricLabel(key)} ${formatPrice(value)}`)
+    .join(' / ')}`;
 }
 
 /**
@@ -186,11 +203,14 @@ export function formatKlineTooltip(data: TooltipData): string {
   
   // 主图指标
   if (indicators.includes('ma') && data.ma) {
-    if (!hasIndicatorSection) {
-      lines.push(`<div style="margin-top:4px;border-top:1px solid #eee;padding-top:4px">MA: ${formatPrice(data.ma.ma5)} / ${formatPrice(data.ma.ma10)} / ${formatPrice(data.ma.ma20)}</div>`);
-      hasIndicatorSection = true;
-    } else {
-      lines.push(`<div>MA: ${formatPrice(data.ma.ma5)} / ${formatPrice(data.ma.ma10)} / ${formatPrice(data.ma.ma20)}</div>`);
+    const maLine = formatMetricRecord('MA', data.ma, 'ma');
+    if (maLine) {
+      if (!hasIndicatorSection) {
+        lines.push(`<div style="margin-top:4px;border-top:1px solid #eee;padding-top:4px">${maLine}</div>`);
+        hasIndicatorSection = true;
+      } else {
+        lines.push(`<div>${maLine}</div>`);
+      }
     }
   }
   
@@ -237,15 +257,24 @@ export function formatKlineTooltip(data: TooltipData): string {
   }
   
   if (indicators.includes('rsi') && data.rsi) {
-    lines.push(`<div>RSI: ${formatPrice(data.rsi.rsi6)} / ${formatPrice(data.rsi.rsi12)} / ${formatPrice(data.rsi.rsi24)}</div>`);
+    const rsiLine = formatMetricRecord('RSI', data.rsi, 'rsi');
+    if (rsiLine) {
+      lines.push(`<div>${rsiLine}</div>`);
+    }
   }
   
   if (indicators.includes('wr') && data.wr) {
-    lines.push(`<div>WR: ${formatPrice(data.wr.wr6)} / ${formatPrice(data.wr.wr10)}</div>`);
+    const wrLine = formatMetricRecord('WR', data.wr, 'wr');
+    if (wrLine) {
+      lines.push(`<div>${wrLine}</div>`);
+    }
   }
   
   if (indicators.includes('bias') && data.bias) {
-    lines.push(`<div>BIAS: ${formatPrice(data.bias.bias6)} / ${formatPrice(data.bias.bias12)} / ${formatPrice(data.bias.bias24)}</div>`);
+    const biasLine = formatMetricRecord('BIAS', data.bias, 'bias');
+    if (biasLine) {
+      lines.push(`<div>${biasLine}</div>`);
+    }
   }
   
   if (indicators.includes('cci') && data.cci) {

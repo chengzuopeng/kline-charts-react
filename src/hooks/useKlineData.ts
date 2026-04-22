@@ -7,6 +7,7 @@ import type {
   PeriodType,
   MarketType,
   AdjustType,
+  IndicatorType,
   KLineDataProvider,
   SDKOptions,
   RequestOptions,
@@ -39,7 +40,7 @@ interface UseKlineDataParams {
   sdkOptions?: SDKOptions;
   requestOptions?: RequestOptions;
   indicatorOptions?: IndicatorOptions;
-  indicators?: string[];
+  indicators?: IndicatorType[];
 }
 
 interface UseKlineDataResult {
@@ -50,10 +51,12 @@ interface UseKlineDataResult {
   refresh: () => Promise<void>;
 }
 
-const cache = new DataCache<KlineData[]>();
+const klineCache = new DataCache<KlineData[]>();
+const timelineCache = new DataCache<TimelineData[]>();
 
 // 请求去重：存储正在进行中的请求 Promise
-const pendingRequests = new Map<string, Promise<KlineData[]>>();
+const pendingKlineRequests = new Map<string, Promise<KlineData[]>>();
+const pendingTimelineRequests = new Map<string, Promise<TimelineData[]>>();
 
 /**
  * 默认防抖时间（毫秒）
@@ -187,12 +190,25 @@ function createDefaultProvider(sdkOptions?: SDKOptions): KLineDataProvider {
   };
 }
 
+function buildKlineCacheKey(params: {
+  symbol: string;
+  market: MarketType;
+  period: PeriodType;
+  adjust: AdjustType;
+}) {
+  return DataCache.buildKey(params);
+}
+
+function buildTimelineCacheKey(params: { symbol: string; market: MarketType }) {
+  return DataCache.buildKey({ ...params, type: 'timeline' });
+}
+
 /**
  * 为 K 线数据添加技术指标
  */
 function addIndicators(
   data: KlineData[],
-  indicators: string[],
+  indicators: IndicatorType[],
   options: IndicatorOptions = {}
 ): KlineWithIndicators[] {
   if (data.length === 0) return [];
@@ -300,13 +316,23 @@ export function useKlineData(params: UseKlineDataParams): UseKlineDataResult {
   } = params;
 
   const [rawData, setRawData] = useState<KlineData[]>([]);
-  const [timelineData, setTimelineData] = useState<TimelineData[]>([]);
+  const [timelineState, setTimelineState] = useState<{ key: string; data: TimelineData[] }>({
+    key: '',
+    data: [],
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
   const abortControllerRef = useRef<AbortController | null>(null);
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const providerRef = useRef<KLineDataProvider | null>(null);
+  const requestIdRef = useRef(0);
+
+  useEffect(() => {
+    if (!dataProvider) {
+      providerRef.current = null;
+    }
+  }, [dataProvider, sdkOptions]);
 
   // 获取或创建 provider
   const getProvider = useCallback(() => {
@@ -325,82 +351,81 @@ export function useKlineData(params: UseKlineDataParams): UseKlineDataResult {
     }
 
     const controller = new AbortController();
+    const requestId = ++requestIdRef.current;
     abortControllerRef.current = controller;
+    const useDedupe = requestOptions?.dedupe !== false;
+    const isActiveRequest = () => requestId === requestIdRef.current && !controller.signal.aborted;
 
     setLoading(true);
     setError(null);
 
     try {
       const provider = getProvider();
-      const cacheKey = DataCache.buildKey({ symbol, market, period, adjust });
-      
-      // 1. 先检查缓存（最快路径）
-      const cachedData = cache.get(cacheKey) as KlineData[] | undefined;
-      if (cachedData && requestOptions?.dedupe !== false) {
-        setRawData(cachedData);
-        setLoading(false);
-        
-        // 如果是分时周期，也检查分时数据缓存
-        if (period === 'timeline') {
-          const timelineCacheKey = DataCache.buildKey({ symbol, market, type: 'timeline' });
-          const cachedTimeline = cache.get(timelineCacheKey) as TimelineData[] | undefined;
-          if (cachedTimeline) {
-            setTimelineData(cachedTimeline);
+      const klineCacheKey = buildKlineCacheKey({ symbol, market, period, adjust });
+      const timelineCacheKey = buildTimelineCacheKey({ symbol, market });
+      const ttl = getTTLByPeriod(period);
+
+      let klineData = useDedupe ? klineCache.get(klineCacheKey) : undefined;
+      if (!klineData) {
+        const pendingRequest = useDedupe ? pendingKlineRequests.get(klineCacheKey) : undefined;
+        if (pendingRequest) {
+          try {
+            klineData = await pendingRequest;
+          } catch {
+            // 复用的请求失败，忽略错误（会由原始请求处理）
+          }
+        } else {
+          const requestPromise = provider.getKline(
+            { symbol, market, period, adjust },
+            controller.signal
+          );
+
+          pendingKlineRequests.set(klineCacheKey, requestPromise);
+
+          try {
+            klineData = await requestPromise;
+          } finally {
+            pendingKlineRequests.delete(klineCacheKey);
           }
         }
-        return;
       }
 
-      // 2. 检查是否有相同的请求正在进行中（请求去重）
-      const pendingRequest = pendingRequests.get(cacheKey);
-      if (pendingRequest) {
-        try {
-          const klineData = await pendingRequest;
-          if (!controller.signal.aborted) {
-            setRawData(klineData);
-          }
-        } catch {
-          // 复用的请求失败，忽略错误（会由原始请求处理）
-        } finally {
-          if (!controller.signal.aborted) {
-            setLoading(false);
-          }
-        }
-        return;
-      }
+      if (!isActiveRequest() || !klineData) return;
 
-      // 3. 发起新请求
-      const requestPromise = provider.getKline(
-        { symbol, market, period, adjust },
-        controller.signal
-      );
-      
-      // 注册到 pending 请求中
-      pendingRequests.set(cacheKey, requestPromise);
+      klineCache.set(klineCacheKey, klineData, ttl);
+      setRawData(klineData);
 
-      try {
-        const klineData = await requestPromise;
-        
-        // 检查是否已取消
-        if (controller.signal.aborted) return;
+      if (period === 'timeline' && provider.getTimeline) {
+        let nextTimelineData = useDedupe ? timelineCache.get(timelineCacheKey) : undefined;
 
-        // 根据周期类型设置缓存 TTL
-        const ttl = getTTLByPeriod(period);
-        cache.set(cacheKey, klineData, ttl);
-        setRawData(klineData);
+        if (!nextTimelineData) {
+          setTimelineState({ key: timelineCacheKey, data: [] });
 
-        // 如果是分时周期，同时获取分时数据
-        if (period === 'timeline' && provider.getTimeline) {
-          const timeline = await provider.getTimeline({ symbol, market }, controller.signal);
-          if (!controller.signal.aborted) {
-            const timelineCacheKey = DataCache.buildKey({ symbol, market, type: 'timeline' });
-            cache.set(timelineCacheKey, timeline as unknown as KlineData[], ttl);
-            setTimelineData(timeline);
+          const pendingTimelineRequest = useDedupe
+            ? pendingTimelineRequests.get(timelineCacheKey)
+            : undefined;
+          if (pendingTimelineRequest) {
+            try {
+              nextTimelineData = await pendingTimelineRequest;
+            } catch {
+              // 复用的请求失败，忽略错误（会由原始请求处理）
+            }
+          } else {
+            const timelineRequest = provider.getTimeline({ symbol, market }, controller.signal);
+            pendingTimelineRequests.set(timelineCacheKey, timelineRequest);
+
+            try {
+              nextTimelineData = await timelineRequest;
+            } finally {
+              pendingTimelineRequests.delete(timelineCacheKey);
+            }
           }
         }
-      } finally {
-        // 请求完成后从 pending 中移除
-        pendingRequests.delete(cacheKey);
+
+        if (isActiveRequest() && nextTimelineData) {
+          timelineCache.set(timelineCacheKey, nextTimelineData, ttl);
+          setTimelineState({ key: timelineCacheKey, data: nextTimelineData });
+        }
       }
     } catch (err) {
       if ((err as Error).name === 'AbortError') return;
@@ -415,8 +440,14 @@ export function useKlineData(params: UseKlineDataParams): UseKlineDataResult {
   // 刷新方法
   const refresh = useCallback(async () => {
     // 清除缓存
-    const cacheKey = DataCache.buildKey({ symbol, market, period, adjust });
-    cache.delete(cacheKey);
+    const klineCacheKey = buildKlineCacheKey({ symbol, market, period, adjust });
+    klineCache.delete(klineCacheKey);
+
+    if (period === 'timeline') {
+      timelineCache.delete(buildTimelineCacheKey({ symbol, market }));
+      setTimelineState({ key: '', data: [] });
+    }
+
     await loadData();
   }, [symbol, market, period, adjust, loadData]);
 
@@ -438,8 +469,6 @@ export function useKlineData(params: UseKlineDataParams): UseKlineDataResult {
         abortControllerRef.current.abort();
       }
     };
-    // 显式监听核心参数，确保复权等参数变化时触发重新加载
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [symbol, market, period, adjust, loadData, requestOptions?.debounceMs]);
 
   // 计算带指标的数据（仅在原始数据、指标列表或指标参数变化时重算）
@@ -447,6 +476,9 @@ export function useKlineData(params: UseKlineDataParams): UseKlineDataResult {
     () => addIndicators(rawData, indicators, indicatorOptions),
     [rawData, indicators, indicatorOptions]
   );
+
+  const activeTimelineKey = period === 'timeline' ? buildTimelineCacheKey({ symbol, market }) : '';
+  const timelineData = timelineState.key === activeTimelineKey ? timelineState.data : [];
 
   return { data, timelineData, loading, error, refresh };
 }

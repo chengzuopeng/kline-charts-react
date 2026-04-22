@@ -29,7 +29,7 @@ jobs:
         run: yarn install --frozen-lockfile
 
       - name: Install playground dependencies
-        run: yarn install --frozen-lockfile
+        run: yarn install
         working-directory: playground
 
       - name: Build playground with local source

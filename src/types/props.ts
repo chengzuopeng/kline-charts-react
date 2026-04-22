@@ -1,5 +1,7 @@
 import type { CSSProperties } from 'react';
 import type { EChartsOption } from 'echarts';
+import type { EChartsType } from 'echarts/core';
+import type { RequestClientOptions } from 'stock-sdk';
 import type { KlineData, TimelineData } from './data';
 import type { ThemeConfig } from './theme';
 
@@ -224,18 +226,19 @@ export interface AutoRefreshOptions {
 }
 
 /**
- * 时间轴配置
- */
-export type TimeAxisOptions =
-  | { mode: 'trading'; sessionCompression?: boolean }
-  | { mode: 'continuous' };
-
-/**
  * ECharts Option 合并配置
  */
 export interface EChartsOptionMergeOptions {
   mode?: 'safeMerge' | 'replace';
   replaceMerge?: string[];
+}
+
+/**
+ * 当前可见范围
+ */
+export interface VisibleRange {
+  start: number;
+  end: number;
 }
 
 /**
@@ -247,14 +250,7 @@ export interface PaneConfig {
   indicators: IndicatorType[];
 }
 
-/**
- * SDK 配置
- */
-export interface SDKOptions {
-  baseUrl?: string;
-  timeout?: number;
-  headers?: Record<string, string>;
-}
+export type SDKOptions = RequestClientOptions;
 
 /**
  * KLineChart 组件 Props
@@ -264,18 +260,24 @@ export interface KLineChartProps {
   symbol: string;
   /** 市场类型 */
   market?: MarketType;
-  /** K 线周期 */
+  /** K 线周期（受控） */
   period?: PeriodType;
-  /** 复权类型 */
+  /** 非受控模式下的默认周期 */
+  defaultPeriod?: PeriodType;
+  /** 复权类型（受控） */
   adjust?: AdjustType;
+  /** 非受控模式下的默认复权类型 */
+  defaultAdjust?: AdjustType;
   /** 图表高度 */
   height?: number | string;
   /** 图表宽度 */
   width?: number | string;
   /** 主题 */
   theme?: 'light' | 'dark' | ThemeConfig;
-  /** 启用的技术指标 */
+  /** 启用的技术指标（受控） */
   indicators?: IndicatorType[];
+  /** 非受控模式下默认启用的技术指标 */
+  defaultIndicators?: IndicatorType[];
   /** 指标参数配置 */
   indicatorOptions?: IndicatorOptions;
   /** 是否显示工具栏 */
@@ -292,6 +294,12 @@ export interface KLineChartProps {
   onDataLoad?: (data: KlineData[]) => void;
   /** 周期切换回调 */
   onPeriodChange?: (period: PeriodType) => void;
+  /** 复权切换回调 */
+  onAdjustChange?: (adjust: AdjustType) => void;
+  /** 指标切换回调 */
+  onIndicatorsChange?: (indicators: IndicatorType[]) => void;
+  /** 可见范围变化回调 */
+  onVisibleRangeChange?: (range: VisibleRange) => void;
   /** 错误回调 */
   onError?: (error: Error) => void;
   /** 数据源提供者 */
@@ -302,8 +310,6 @@ export interface KLineChartProps {
   requestOptions?: RequestOptions;
   /** 自动刷新配置 */
   autoRefresh?: boolean | AutoRefreshOptions;
-  /** 时间轴配置 */
-  timeAxis?: TimeAxisOptions;
   /** 自定义 ECharts 配置 */
   echartsOption?: EChartsOption;
   /** ECharts Option 合并策略 */
@@ -322,10 +328,12 @@ export interface KLineChartProps {
 export interface KLineChartRef {
   refresh(): Promise<void>;
   setPeriod(period: PeriodType): void;
+  setAdjust(adjust: AdjustType): void;
   setIndicators(indicators: IndicatorType[]): void;
   zoomTo(start: number, end: number): void;
   resetZoom(): void;
-  getEchartsInstance(): unknown | null;
+  getVisibleRange(): VisibleRange;
+  getEchartsInstance(): EChartsType | null;
   exportImage(type?: 'png' | 'jpeg'): string;
   getData(): KlineData[];
 }

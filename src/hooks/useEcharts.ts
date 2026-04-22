@@ -42,10 +42,10 @@ interface SetOptionOpts {
 
 interface UseEchartsResult {
   chartRef: React.RefObject<HTMLDivElement | null>;
-  chartInstance: EChartsInstance | null;
   setOption: (option: EChartsOption, opts?: boolean | SetOptionOpts, lazyUpdate?: boolean) => void;
   resize: () => void;
   dispose: () => void;
+  getInstance: () => EChartsInstance | null;
   getDataURL: (opts?: { type?: 'png' | 'jpeg'; pixelRatio?: number; backgroundColor?: string }) => string;
   bindEvent: (eventName: string, handler: (params: unknown) => void) => () => void;
 }
@@ -116,6 +116,8 @@ export function useEcharts(): UseEchartsResult {
     []
   );
 
+  const getInstance = useCallback(() => instanceRef.current, []);
+
   // 绑定事件
   const bindEvent = useCallback(
     (eventName: string, handler: (params: unknown) => void) => {
@@ -133,10 +135,10 @@ export function useEcharts(): UseEchartsResult {
 
   return {
     chartRef,
-    chartInstance: instanceRef.current,
     setOption,
     resize,
     dispose,
+    getInstance,
     getDataURL,
     bindEvent,
   };

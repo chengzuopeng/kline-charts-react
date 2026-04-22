@@ -1,6 +1,7 @@
 import type { EChartsOption } from 'echarts';
 import type { KlineWithIndicators, ThemeConfig, IndicatorType, PaneConfig, IndicatorOptions } from '@/types';
 import { formatKlineTooltip, formatVolume } from './formatters';
+import { getBIASPeriods, getMAPeriods, getRSIPeriods, getWRPeriods } from './indicatorMeta';
 
 
 /**
@@ -222,8 +223,10 @@ export function buildOption(params: {
     indicatorOptions,
   } = params;
   void _visibleCount; // 避免 unused variable 警告
-  const maOpts = typeof indicatorOptions?.ma === 'object' ? indicatorOptions.ma : undefined;
-  const maPeriods: number[] = maOpts?.periods ?? [5, 10, 20, 30, 60];
+  const maPeriods = getMAPeriods(indicatorOptions?.ma);
+  const rsiPeriods = getRSIPeriods(indicatorOptions?.rsi);
+  const wrPeriods = getWRPeriods(indicatorOptions?.wr);
+  const biasPeriods = getBIASPeriods(indicatorOptions?.bias);
 
   if (data.length === 0) {
     return {
@@ -532,8 +535,7 @@ export function buildOption(params: {
 
     // RSI 指标
     if (pane.indicators.includes('rsi')) {
-      const periods = [6, 12, 24];
-      periods.forEach((period, i) => {
+      rsiPeriods.forEach((period, i) => {
         series.push({
           type: 'line',
           name: `RSI${period}`,
@@ -548,8 +550,7 @@ export function buildOption(params: {
 
     // WR 指标
     if (pane.indicators.includes('wr')) {
-      const periods = [6, 10];
-      periods.forEach((period, i) => {
+      wrPeriods.forEach((period, i) => {
         series.push({
           type: 'line',
           name: `WR${period}`,
@@ -564,8 +565,7 @@ export function buildOption(params: {
 
     // BIAS 指标
     if (pane.indicators.includes('bias')) {
-      const periods = [6, 12, 24];
-      periods.forEach((period, i) => {
+      biasPeriods.forEach((period, i) => {
         series.push({
           type: 'line',
           name: `BIAS${period}`,

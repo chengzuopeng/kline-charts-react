@@ -6,8 +6,7 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const isProduction = process.env.NODE_ENV === 'production';
-const useLocalSource = !isProduction || process.env.USE_LOCAL_SOURCE === 'true';
+const useLocalSource = process.env.USE_LOCAL_SOURCE !== 'false';
 const isGitHubPages = process.env.GITHUB_PAGES === 'true';
 
 export default defineConfig({

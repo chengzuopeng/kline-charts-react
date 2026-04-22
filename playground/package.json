@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "echarts": "^5.5.0",
-    "kline-charts-react": "latest",
+    "kline-charts-react": "file:..",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },

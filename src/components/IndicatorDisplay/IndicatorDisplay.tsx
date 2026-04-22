@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import type { KlineWithIndicators, IndicatorType, ThemeConfig } from '@/types';
 import { formatPrice } from '@/utils/formatters';
+import { formatMetricLabel, getMetricEntries } from '@/utils/indicatorMeta';
 import styles from './IndicatorDisplay.module.css';
 
 interface IndicatorDisplayProps {
@@ -44,14 +45,11 @@ export function IndicatorDisplay({ data, indicators, hoverIndex, theme }: Indica
       {/* MA 指标数值 */}
       {showMA && displayData.ma && (
         <div className={styles.group}>
-          {Object.keys(displayData.ma)
-            .filter((key) => key.startsWith('ma') && displayData.ma?.[key] !== null && displayData.ma?.[key] !== undefined)
-            .map((key, i) => {
-              const value = displayData.ma?.[key];
+          {getMetricEntries(displayData.ma, 'ma').map(([key, value], i) => {
               const color = maColors[i] ?? '#999';
               return (
                 <span key={key} className={styles.item} style={{ color }}>
-                  {key.toUpperCase()}: {formatPrice(value)}
+                  {formatMetricLabel(key)}: {formatPrice(value)}
                 </span>
               );
             })}

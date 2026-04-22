@@ -82,11 +82,40 @@ function App() {
 ```tsx
 <KLineChart
   symbol="sh600519"
-  period="weekly"  // 周 K 线
+  defaultPeriod="weekly"  // 非受控模式下默认显示周 K
 />
 ```
 
 可选周期：`timeline` | `timeline5` | `1` | `5` | `15` | `30` | `60` | `daily` | `weekly` | `monthly`
+
+### 受控 / 非受控
+
+`period`、`adjust`、`indicators` 支持受控模式；`defaultPeriod`、`defaultAdjust`、`defaultIndicators` 用于非受控默认值。
+
+```tsx
+// 非受控
+<KLineChart
+  symbol="sh600519"
+  defaultPeriod="daily"
+  defaultAdjust="qfq"
+  defaultIndicators={['ma', 'volume', 'macd']}
+/>
+```
+
+```tsx
+// 受控
+function App() {
+  const [period, setPeriod] = useState<PeriodType>('daily');
+
+  return (
+    <KLineChart
+      symbol="sh600519"
+      period={period}
+      onPeriodChange={setPeriod}
+    />
+  );
+}
+```
 
 ### 配置技术指标
 
@@ -211,6 +240,14 @@ function App() {
 }
 ```
 
+### `unstable` 二级导出
+
+主入口只保留稳定导出。如果你明确需要内部 hooks / 子组件，请从 `kline-charts-react/unstable` 引入：
+
+```tsx
+import { useKlineData, Toolbar } from 'kline-charts-react/unstable';
+```
+
 ## API 文档
 
 ### KLineChartProps
@@ -219,12 +256,15 @@ function App() {
 |------|------|--------|------|
 | `symbol` | `string` | **必填** | 股票代码，如 `sh600519`、`sz000001` |
 | `market` | `'A' \| 'HK' \| 'US'` | `'A'` | 市场类型 |
-| `period` | `PeriodType` | `'daily'` | K 线周期 |
-| `adjust` | `'' \| 'qfq' \| 'hfq'` | `'qfq'` | 复权类型（前复权） |
+| `period` | `PeriodType` | - | 当前 K 线周期（受控） |
+| `defaultPeriod` | `PeriodType` | `'daily'` | 非受控模式下默认周期 |
+| `adjust` | `'' \| 'qfq' \| 'hfq'` | - | 当前复权类型（受控） |
+| `defaultAdjust` | `'' \| 'qfq' \| 'hfq'` | `'qfq'` | 非受控模式下默认复权 |
 | `height` | `number \| string` | `500` | 图表高度 |
 | `width` | `number \| string` | `'100%'` | 图表宽度 |
 | `theme` | `'light' \| 'dark' \| ThemeConfig` | `'light'` | 主题配置 |
-| `indicators` | `IndicatorType[]` | `['ma', 'volume', 'macd']` | 启用的技术指标 |
+| `indicators` | `IndicatorType[]` | - | 当前启用的技术指标（受控） |
+| `defaultIndicators` | `IndicatorType[]` | `['ma', 'volume', 'macd']` | 非受控模式下默认指标 |
 | `indicatorOptions` | `IndicatorOptions` | - | 指标参数配置 |
 | `showToolbar` | `boolean` | `true` | 是否显示工具栏 |
 | `showPeriodSelector` | `boolean` | `true` | 是否显示周期切换 |
@@ -236,8 +276,13 @@ function App() {
 | `requestOptions` | `RequestOptions` | - | 请求控制配置 |
 | `autoRefresh` | `boolean \| AutoRefreshOptions` | - | 自动刷新配置 |
 | `echartsOption` | `EChartsOption` | - | 自定义 ECharts 配置 |
+| `echartsOptionMerge` | `EChartsOptionMergeOptions` | - | ECharts Option 合并策略 |
+| `panes` | `PaneConfig[]` | - | 自定义面板布局，支持单副图多指标 |
 | `onDataLoad` | `(data: KlineData[]) => void` | - | 数据加载回调 |
 | `onPeriodChange` | `(period: PeriodType) => void` | - | 周期切换回调 |
+| `onAdjustChange` | `(adjust: AdjustType) => void` | - | 复权切换回调 |
+| `onIndicatorsChange` | `(indicators: IndicatorType[]) => void` | - | 指标切换回调 |
+| `onVisibleRangeChange` | `({ start, end }) => void` | - | 当前 dataZoom 可见范围变化 |
 | `onError` | `(error: Error) => void` | - | 错误回调 |
 
 ### KLineChartRef
@@ -246,9 +291,11 @@ function App() {
 |------|------|
 | `refresh()` | 刷新数据 |
 | `setPeriod(period)` | 切换周期 |
+| `setAdjust(adjust)` | 切换复权 |
 | `setIndicators(indicators)` | 切换指标 |
 | `zoomTo(start, end)` | 缩放到指定范围 |
 | `resetZoom()` | 重置缩放 |
+| `getVisibleRange()` | 获取当前可见范围 `{ start, end }` |
 | `getEchartsInstance()` | 获取 ECharts 实例 |
 | `exportImage(type?)` | 导出图片（png/jpeg） |
 | `getData()` | 获取当前数据 |
@@ -410,16 +457,26 @@ yarn dev
 # 构建组件库
 yarn build
 
-# 构建 playground 生产版本（使用 npm 包）
+# 构建 playground 生产版本
 yarn build:playground
 
 # 代码检查
 yarn lint
+
+# 类型检查
+yarn typecheck
+
+# 单元测试
+yarn test:run
+
+# 打包校验
+yarn pack:check
 ```
 
 **开发模式说明**：
 - `yarn dev` 会启动 playground，直接引用 `src/` 下的源码，修改源码后自动热更新
-- 生产构建时，playground 会使用 npm 上发布的 `kline-charts-react` 包
+- `playground/` 通过本地 `file:..` 依赖引用当前仓库，避免和 npm 上的历史版本漂移
+- CI 会执行 `lint`、`typecheck`、`test:run`、`build`、`build:playground` 和 `pack:check`
 
 ## 已知限制
 
