@@ -2797,10 +2797,10 @@ std-env@^3.9.0:
   resolved "https://registry.yarnpkg.com/std-env/-/std-env-3.10.0.tgz#d810b27e3a073047b2b5e40034881f5ea6f9c83b"
   integrity sha512-5GS12FdOZNliM5mAOxFRg7Ir0pWz8MdpYm6AY6VPkGpbA7ZzmbzNcBJQ0GPvvyWgcY7QAhCgf9Uy89I03faLkg==
 
-stock-sdk@^1.8.0:
-  version "1.8.0"
-  resolved "https://registry.yarnpkg.com/stock-sdk/-/stock-sdk-1.8.0.tgz#40fdd9c1752bc2d19401bb41a545e8ffa14c650b"
-  integrity sha512-j3944ApHPD6Btkp9wBbTo68DVRF0CAD2pB6UdVr9nqq7tDS6hlwnSMxJo8Mj69xb1HHDBhuqMbDi9/+SFoEeLg==
+stock-sdk@1.8.3:
+  version "1.8.3"
+  resolved "https://registry.yarnpkg.com/stock-sdk/-/stock-sdk-1.8.3.tgz#c52c1fcb3c6bb65d47e9ac91437e30b397e60db0"
+  integrity sha512-HW+Ff+LVO9ujg7z69jfuuWM5nJbDgxq+JkSzv+MUxJ6sAiPibAM9NmBuL+FLDVAlGZuilo3Pt12LOI4BxmU8Ow==
 
 string-argv@~0.3.1:
   version "0.3.2"
