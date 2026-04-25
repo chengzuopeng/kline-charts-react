@@ -34,7 +34,7 @@ export interface KlineData {
  * 分时数据结构
  */
 export interface TimelineData {
-  /** 时间 HH:mm */
+  /** 时间，单日分时为 HH:mm，五日分时为 YYYY-MM-DD HH:mm */
   time: string;
   /** 价格 */
   price: number;

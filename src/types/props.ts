@@ -215,6 +215,8 @@ export interface RequestOptions {
   debounceMs?: number;
   abortOnChange?: boolean;
   dedupe?: boolean;
+  /** loadMore 每次请求的历史数据条数，默认 180 */
+  loadMoreLimit?: number;
 }
 
 /**
@@ -286,6 +288,8 @@ export interface KLineChartProps {
   showPeriodSelector?: boolean;
   /** 是否显示指标切换 */
   showIndicatorSelector?: boolean;
+  /** 是否显示缩放（鼠标滚轮 + 底部滑块），默认 true；可按周期单独设置，如 { timeline: false, timeline5: false } */
+  showDataZoomSlider?: boolean | Partial<Record<PeriodType, boolean>>;
   /** 最多显示几个副图，默认 3，最大 3，传入 0 表示不显示副图 */
   maxSubPanes?: number;
   /** 初始可见 K 线数量 */
