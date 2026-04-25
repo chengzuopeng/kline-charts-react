@@ -47,8 +47,11 @@ interface UseKlineDataResult {
   data: KlineWithIndicators[];
   timelineData: TimelineData[];
   loading: boolean;
+  loadingMore: boolean;
   error: Error | null;
+  hasMore: boolean;
   refresh: () => Promise<void>;
+  loadMore: () => Promise<void>;
 }
 
 const klineCache = new DataCache<KlineData[]>();
@@ -63,6 +66,11 @@ const pendingTimelineRequests = new Map<string, Promise<TimelineData[]>>();
  * 避免快速切换参数时发起过多请求
  */
 const DEFAULT_DEBOUNCE_MS = 150;
+
+/**
+ * loadMore 每次请求的历史数据条数
+ */
+const LOAD_MORE_LIMIT = 180;
 
 /**
  * 创建默认的数据提供者（基于 stock-sdk）
@@ -199,8 +207,8 @@ function buildKlineCacheKey(params: {
   return DataCache.buildKey(params);
 }
 
-function buildTimelineCacheKey(params: { symbol: string; market: MarketType }) {
-  return DataCache.buildKey({ ...params, type: 'timeline' });
+function buildTimelineCacheKey(params: { symbol: string; market: MarketType; type?: 'timeline' | 'timeline5' }) {
+  return DataCache.buildKey({ ...params, type: params.type ?? 'timeline' });
 }
 
 /**
@@ -321,12 +329,22 @@ export function useKlineData(params: UseKlineDataParams): UseKlineDataResult {
     data: [],
   });
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
   const abortControllerRef = useRef<AbortController | null>(null);
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const providerRef = useRef<KLineDataProvider | null>(null);
   const requestIdRef = useRef(0);
+  const loadMoreLimitRef = useRef(requestOptions?.loadMoreLimit ?? LOAD_MORE_LIMIT);
+  useEffect(() => {
+    loadMoreLimitRef.current = requestOptions?.loadMoreLimit ?? LOAD_MORE_LIMIT;
+  }, [requestOptions?.loadMoreLimit]);
+  const paramsRef = useRef({ symbol, market, period, adjust });
+  useEffect(() => {
+    paramsRef.current = { symbol, market, period, adjust };
+  }, [symbol, market, period, adjust]);
 
   useEffect(() => {
     if (!dataProvider) {
@@ -345,6 +363,11 @@ export function useKlineData(params: UseKlineDataParams): UseKlineDataResult {
 
   // 加载数据
   const loadData = useCallback(async () => {
+    // 切换参数时清空旧数据，避免显示上一个周期的残留数据
+    setRawData([]);
+    setTimelineState({ key: '', data: [] });
+    setHasMore(true);
+
     // 取消之前的请求
     if (requestOptions?.abortOnChange !== false && abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -426,6 +449,37 @@ export function useKlineData(params: UseKlineDataParams): UseKlineDataResult {
           timelineCache.set(timelineCacheKey, nextTimelineData, ttl);
           setTimelineState({ key: timelineCacheKey, data: nextTimelineData });
         }
+      } else if (period === 'timeline5') {
+        // VWAP 计算，按交易日重置
+        let cumAmount = 0;
+        let cumVolume = 0;
+        let prevDate = '';
+        const timeline: TimelineData[] = klineData
+          .filter((d) => d.date && d.date.length >= 10)
+          .map((d) => {
+            const dateStr = d.date.slice(0, 10);
+            if (dateStr !== prevDate) {
+              cumAmount = 0;
+              cumVolume = 0;
+              prevDate = dateStr;
+            }
+            const vol = d.volume ?? 0;
+            const amt = d.amount ?? 0;
+            cumAmount += amt;
+            cumVolume += vol;
+            return {
+              time: d.date,
+              price: d.close ?? 0,
+              volume: cumVolume,
+              amount: cumAmount,
+              avgPrice: cumVolume > 0 ? cumAmount / cumVolume : (d.close ?? 0),
+            };
+          });
+        if (isActiveRequest()) {
+          const timeline5CacheKey = buildTimelineCacheKey({ symbol, market, type: 'timeline5' });
+          timelineCache.set(timeline5CacheKey, timeline, ttl);
+          setTimelineState({ key: timeline5CacheKey, data: timeline });
+        }
       }
     } catch (err) {
       if ((err as Error).name === 'AbortError') return;
@@ -446,13 +500,25 @@ export function useKlineData(params: UseKlineDataParams): UseKlineDataResult {
     if (period === 'timeline') {
       timelineCache.delete(buildTimelineCacheKey({ symbol, market }));
       setTimelineState({ key: '', data: [] });
+    } else if (period === 'timeline5') {
+      const timeline5CacheKey = buildTimelineCacheKey({ symbol, market, type: 'timeline5' });
+      timelineCache.delete(timeline5CacheKey);
+      setTimelineState({ key: '', data: [] });
     }
+    setHasMore(true);
+    setLoading(true);
 
     await loadData();
   }, [symbol, market, period, adjust, loadData]);
 
   // 监听参数变化 - 直接监听核心参数，避免 useCallback 依赖问题
   useEffect(() => {
+    // 立即清空旧数据，不等 debounce
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- stable setState, safe to call
+    setRawData([]);
+    setTimelineState({ key: '', data: [] });
+    setHasMore(true);
+
     // 防抖处理（默认启用 150ms 防抖，减少快速切换时的请求）
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
@@ -471,14 +537,66 @@ export function useKlineData(params: UseKlineDataParams): UseKlineDataResult {
     };
   }, [symbol, market, period, adjust, loadData, requestOptions?.debounceMs]);
 
+  // 加载更多历史数据（向左滚动触发）
+  const loadMore = useCallback(async () => {
+    if (loadingMore || !hasMore) return;
+    if (rawData.length === 0) return;
+    const isKline = ['daily', 'weekly', 'monthly'].includes(period);
+    if (!isKline) return;
+
+    // 快照当前参数，用于异步完成后校验
+    const snapshot = { ...paramsRef.current };
+
+    setLoadingMore(true);
+    try {
+      const provider = getProvider();
+      const earliestDate = rawData[0]?.date;
+      if (!earliestDate) return;
+
+      const olderData = await provider.getKline(
+        { symbol, market, period, adjust, cursor: earliestDate, limit: loadMoreLimitRef.current },
+      );
+
+      // 参数已变化，丢弃结果
+      const current = paramsRef.current;
+      if (snapshot.symbol !== current.symbol || snapshot.market !== current.market || snapshot.period !== current.period || snapshot.adjust !== current.adjust) return;
+
+      if (olderData.length === 0) {
+        setHasMore(false);
+        return;
+      }
+
+      const filtered = olderData.filter((d) => d.date < earliestDate);
+
+      if (filtered.length === 0) {
+        setHasMore(false);
+        return;
+      }
+
+      const merged = [...filtered, ...rawData];
+      const klineCacheKey = buildKlineCacheKey({ symbol, market, period, adjust });
+      klineCache.set(klineCacheKey, merged, getTTLByPeriod(period));
+      setRawData(merged);
+    } catch (e) {
+      // 加载更多失败不阻塞，但记录错误
+      console.warn('loadMore failed:', e);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [loadingMore, hasMore, rawData, period, symbol, market, adjust, getProvider]);
+
   // 计算带指标的数据（仅在原始数据、指标列表或指标参数变化时重算）
   const data = useMemo(
     () => addIndicators(rawData, indicators, indicatorOptions),
     [rawData, indicators, indicatorOptions]
   );
 
-  const activeTimelineKey = period === 'timeline' ? buildTimelineCacheKey({ symbol, market }) : '';
+  const activeTimelineKey = period === 'timeline'
+    ? buildTimelineCacheKey({ symbol, market })
+    : period === 'timeline5'
+      ? buildTimelineCacheKey({ symbol, market, type: 'timeline5' })
+      : '';
   const timelineData = timelineState.key === activeTimelineKey ? timelineState.data : [];
 
-  return { data, timelineData, loading, error, refresh };
+  return { data, timelineData, loading, loadingMore, error, hasMore, refresh, loadMore };
 }

@@ -39,6 +39,14 @@ function isTimelinePeriod(period: PeriodType): boolean {
   return period === 'timeline' || period === 'timeline5';
 }
 
+function isDataZoomEnabled(
+  showDataZoomSlider: boolean | Partial<Record<PeriodType, boolean>>,
+  period: PeriodType,
+): boolean {
+  if (typeof showDataZoomSlider === 'boolean') return showDataZoomSlider;
+  return showDataZoomSlider[period] ?? true;
+}
+
 /**
  * K 线图表组件
  */
@@ -62,6 +70,7 @@ export const KLineChart = forwardRef<KLineChartRef, KLineChartProps>(function KL
     showToolbar = true,
     showPeriodSelector = true,
     showIndicatorSelector = true,
+    showDataZoomSlider = true,
     maxSubPanes = 3,
     visibleCount = 60,
     onDataLoad,
@@ -117,7 +126,7 @@ export const KLineChart = forwardRef<KLineChartRef, KLineChartProps>(function KL
   );
 
   // 数据获取
-  const { data, timelineData, loading, error, refresh } = useKlineData({
+  const { data, timelineData, loading, loadingMore, error, hasMore, refresh, loadMore } = useKlineData({
     symbol,
     market,
     period,
@@ -228,15 +237,31 @@ export const KLineChart = forwardRef<KLineChartRef, KLineChartProps>(function KL
     };
   }, [currentState.end, currentState.start, getInstance]);
 
+  // dataZoom 事件统一处理：缩放历史 + loadMore 触发 + actualZoomRef 同步
+  const loadMoreRef = useRef(loadMore);
+  const hasMoreRef = useRef(hasMore);
+  const loadingMoreRef = useRef(loadingMore);
+  const prevDataLenRef = useRef(0);
+  const prevZoomKeyRef = useRef('');
+  const actualZoomRef = useRef({ start: 2, end: 100 });
+
+  const calcInitialStart = useCallback((total: number) => {
+    return total > 0 ? Math.max(0, 100 - (visibleCount / total) * 100) : 2;
+  }, [visibleCount]);
+  loadMoreRef.current = loadMore;
+  hasMoreRef.current = hasMore;
+  loadingMoreRef.current = loadingMore;
+
   useEffect(() => {
-    const unbind = bindEvent('datazoom', () => {
+    const unbind = bindEvent('datazoom', (params: unknown) => {
+      // 缩放历史 & suppressedZoomRange 处理
       const range = getCurrentVisibleRange();
       const suppressedRange = suppressedZoomRangeRef.current;
 
       if (
         suppressedRange &&
-        suppressedRange.start === range.start &&
-        suppressedRange.end === range.end
+        Math.abs(suppressedRange.start - range.start) < 0.01 &&
+        Math.abs(suppressedRange.end - range.end) < 0.01
       ) {
         suppressedZoomRangeRef.current = null;
         return;
@@ -244,10 +269,48 @@ export const KLineChart = forwardRef<KLineChartRef, KLineChartProps>(function KL
 
       suppressedZoomRangeRef.current = null;
       pushState(range);
-    });
 
+      // loadMore 触发 & actualZoomRef 同步
+      const p = params as { start?: number; end?: number; batch?: { start?: number; end?: number; dataZoomId?: string }[] };
+      const batch = p?.batch ?? [];
+      const insideBatch = batch.find((b) => b?.dataZoomId === DATA_ZOOM_INSIDE_ID);
+      const start = p?.start ?? insideBatch?.start ?? batch[0]?.start;
+      const end = p?.end ?? insideBatch?.end ?? batch[0]?.end ?? 100;
+      if (start !== undefined) {
+        actualZoomRef.current = { start, end };
+      }
+      if (start !== undefined && start <= 1 && hasMoreRef.current && !loadingMoreRef.current
+          && !isTimelinePeriod(period)) {
+        loadMoreRef.current();
+      }
+    });
     return unbind;
-  }, [bindEvent, getCurrentVisibleRange, pushState]);
+  }, [bindEvent, getCurrentVisibleRange, pushState, period]);
+
+  // 数据从左侧增长（loadMore 追加历史）时，调整 dataZoom 保持可视区域不变
+  useEffect(() => {
+    if (isTimelinePeriod(period)) return;
+    const prevLen = prevDataLenRef.current;
+    const curLen = data.length;
+    prevDataLenRef.current = curLen;
+    if (prevLen > 0 && curLen > prevLen) {
+      const added = curLen - prevLen;
+      const { start, end } = actualZoomRef.current;
+      const newStart = ((start / 100) * prevLen + added) / curLen * 100;
+      const newEnd = ((end / 100) * prevLen + added) / curLen * 100;
+      const safeStart = Math.max(0, Math.min(100, newStart));
+      const safeEnd = Math.max(safeStart, Math.min(100, newEnd));
+      suppressedZoomRangeRef.current = { start: safeStart, end: safeEnd };
+      setOption({
+        dataZoom: [
+          { id: DATA_ZOOM_INSIDE_ID, start: safeStart, end: safeEnd },
+          { id: DATA_ZOOM_SLIDER_ID, start: safeStart, end: safeEnd },
+        ],
+      });
+      actualZoomRef.current = { start: safeStart, end: safeEnd };
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data.length]);
 
   useEffect(() => {
     if (!onVisibleRangeChange) {
@@ -273,7 +336,20 @@ export const KLineChart = forwardRef<KLineChartRef, KLineChartProps>(function KL
 
   // 构建并设置图表配置
   useEffect(() => {
+    const zoomKey = `${symbol}_${period}_${adjust}`;
+    const zoomKeyChanged = prevZoomKeyRef.current !== zoomKey;
+
     if (data.length === 0 && !loading) return;
+    // 分时周期：等 timelineData 就绪再渲染，避免先闪蜡烛图
+    if (isTimelinePeriod(period) && timelineData.length === 0) {
+      return;
+    }
+
+    // 确认要渲染了，再更新 ref
+    if (zoomKeyChanged) {
+      prevZoomKeyRef.current = zoomKey;
+      prevDataLenRef.current = 0;
+    }
 
     let chartOption: EChartsOption;
 
@@ -285,6 +361,7 @@ export const KLineChart = forwardRef<KLineChartRef, KLineChartProps>(function KL
         theme: themeConfig,
         prevClose: prevClose ?? undefined,
         containerHeight: chartHeight,
+        showDataZoom: isDataZoomEnabled(showDataZoomSlider, period),
       }) as EChartsOption;
     } else {
       // K 线图
@@ -296,6 +373,7 @@ export const KLineChart = forwardRef<KLineChartRef, KLineChartProps>(function KL
         visibleCount,
         containerHeight: chartHeight,
         indicatorOptions,
+        showDataZoomSlider: isDataZoomEnabled(showDataZoomSlider, period),
       });
     }
 
@@ -305,6 +383,26 @@ export const KLineChart = forwardRef<KLineChartRef, KLineChartProps>(function KL
       echartsOptionMerge?.mode
     );
 
+    // 将缩放状态注入 dataZoom，避免 replaceMerge 重建后 slider 回到满格
+    // 切换周期/股票时，若 dataZoom 启用则根据 visibleCount 动态计算初始缩放
+    const isTimeline = isTimelinePeriod(period);
+    const dataZoomOn = !isTimeline && isDataZoomEnabled(showDataZoomSlider, period);
+    const initialStart = calcInitialStart(data.length);
+    const zoomState = (zoomKeyChanged && dataZoomOn) ? { start: initialStart, end: 100 } : actualZoomRef.current;
+    if (zoomKeyChanged && dataZoomOn) {
+      actualZoomRef.current = zoomState;
+    }
+    const mergedDataZoom = (mergedOption as Record<string, unknown>).dataZoom;
+    if (Array.isArray(mergedDataZoom) && mergedDataZoom.length > 0) {
+      for (const dz of mergedDataZoom) {
+        if (typeof dz === 'object' && dz !== null) {
+          if (dz.start === undefined) dz.start = zoomState.start;
+          if (dz.end === undefined) dz.end = zoomState.end;
+        }
+      }
+    }
+
+    // 始终 replaceMerge dataZoom，确保 showDataZoomSlider 变化时能正确增删
     const replaceMerge = Array.from(
       new Set([
         'series',
@@ -312,6 +410,7 @@ export const KLineChart = forwardRef<KLineChartRef, KLineChartProps>(function KL
         'yAxis',
         'grid',
         'title',
+        'dataZoom',
         ...(echartsOptionMerge?.replaceMerge ?? []),
       ])
     );
@@ -335,6 +434,10 @@ export const KLineChart = forwardRef<KLineChartRef, KLineChartProps>(function KL
     setOption,
     loading,
     period,
+    showDataZoomSlider,
+    symbol,
+    adjust,
+    calcInitialStart,
   ]);
 
   // 数据加载回调
@@ -392,15 +495,6 @@ export const KLineChart = forwardRef<KLineChartRef, KLineChartProps>(function KL
       }
     },
     [setOption, pushState]
-  );
-
-  const getInitialZoom = useCallback(
-    (total: number) => {
-      if (total <= 0) return { start: 0, end: 100 };
-      const start = Math.max(0, ((total - visibleCount) / total) * 100);
-      return { start, end: 100 };
-    },
-    [visibleCount]
   );
 
   // 缩放操作 - 基于当前状态进行相对调整
@@ -464,10 +558,11 @@ export const KLineChart = forwardRef<KLineChartRef, KLineChartProps>(function KL
 
   // 重置
   const handleReset = useCallback(() => {
-    const { start, end } = getInitialZoom(data.length);
-    applyZoom(start, end, false);
-    resetZoom({ start, end });
-  }, [data.length, getInitialZoom, applyZoom, resetZoom]);
+    const start = calcInitialStart(data.length);
+    applyZoom(start, 100, false);
+    resetZoom({ start, end: 100 });
+    actualZoomRef.current = { start, end: 100 };
+  }, [applyZoom, resetZoom, calcInitialStart, data.length]);
 
   // 全屏切换
   const handleFullscreen = useCallback(() => {
@@ -532,18 +627,6 @@ export const KLineChart = forwardRef<KLineChartRef, KLineChartProps>(function KL
       themeConfig.backgroundColor,
     ]
   );
-
-  // 仅在切换股票/周期/复权时重置缩放，避免数据量微变导致缩放被反复重置
-  const prevZoomKeyRef = useRef('');
-  useEffect(() => {
-    if (isTimelinePeriod(period) || data.length === 0) return;
-    const zoomKey = `${symbol}_${period}_${adjust}`;
-    if (zoomKey === prevZoomKeyRef.current) return;
-    prevZoomKeyRef.current = zoomKey;
-    const { start, end } = getInitialZoom(data.length);
-    applyZoom(start, end, false);
-    resetZoom({ start, end });
-  }, [symbol, period, adjust, data.length, getInitialZoom, applyZoom, resetZoom]);
 
   // CSS 变量
   const cssVars = useMemo(
@@ -626,7 +709,7 @@ export const KLineChart = forwardRef<KLineChartRef, KLineChartProps>(function KL
 
       {/* 图表区域 */}
       <div className={styles.chartWrapper}>
-        {loading && data.length === 0 && <Loading />}
+        {loading && (data.length === 0 || (isTimelinePeriod(period) && timelineData.length === 0)) && <Loading />}
         {error && data.length === 0 && (
           <div className={styles.error}>
             <span>加载失败：{error.message}</span>

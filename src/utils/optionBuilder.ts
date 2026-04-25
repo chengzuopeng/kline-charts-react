@@ -211,6 +211,7 @@ export function buildOption(params: {
   visibleCount?: number;
   containerHeight?: number;
   indicatorOptions?: IndicatorOptions;
+  showDataZoomSlider?: boolean;
 }): EChartsOption {
   const {
     data,
@@ -221,6 +222,7 @@ export function buildOption(params: {
     visibleCount: _visibleCount = 60,
     containerHeight = 500,
     indicatorOptions,
+    showDataZoomSlider = true,
   } = params;
   void _visibleCount; // 避免 unused variable 警告
   const maPeriods = getMAPeriods(indicatorOptions?.ma);
@@ -340,25 +342,27 @@ export function buildOption(params: {
       splitNumber: g.id === 'main' ? 3 : 2,
       scale: g.id !== 'volume' && !g.id.includes('volume'),
     })),
-    dataZoom: [
-      {
-        id: DATA_ZOOM_INSIDE_ID,
-        type: 'inside',
-        xAxisIndex: gridLayouts.map((_, i) => i),
-        minValueSpan: 10,
-      },
-      {
-        id: DATA_ZOOM_SLIDER_ID,
-        type: 'slider',
-        xAxisIndex: gridLayouts.map((_, i) => i),
-        bottom: 8,
-        height: 20,
-        borderColor: theme.gridLineColor,
-        fillerColor: 'rgba(24,144,255,0.1)',
-        handleStyle: { color: theme.activeColor },
-        textStyle: { color: theme.textColorSecondary },
-      },
-    ],
+    dataZoom: showDataZoomSlider
+      ? [
+          {
+            id: DATA_ZOOM_INSIDE_ID,
+            type: 'inside',
+            xAxisIndex: gridLayouts.map((_, i) => i),
+            minValueSpan: 10,
+          },
+          {
+            id: DATA_ZOOM_SLIDER_ID,
+            type: 'slider',
+            xAxisIndex: gridLayouts.map((_, i) => i),
+            bottom: 8,
+            height: 20,
+            borderColor: theme.gridLineColor,
+            fillerColor: 'rgba(24,144,255,0.1)',
+            handleStyle: { color: theme.activeColor },
+            textStyle: { color: theme.textColorSecondary },
+          },
+        ]
+      : [],
     series: [],
   };
 
