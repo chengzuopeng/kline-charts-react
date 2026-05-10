@@ -1,6 +1,6 @@
 {
   "name": "kline-charts-react",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "Professional stock K-line chart React component with built-in data source, powered by ECharts and stock-sdk",
   "author": "chengzuopeng",
   "license": "MIT",
@@ -46,17 +46,6 @@
     "echarts": ">=5.4.0",
     "react": ">=17.0.0",
     "react-dom": ">=17.0.0"
-  },
-  "peerDependenciesMeta": {
-    "react": {
-      "optional": false
-    },
-    "react-dom": {
-      "optional": false
-    },
-    "echarts": {
-      "optional": false
-    }
   },
   "dependencies": {
     "stock-sdk": "1.9.0"
@@ -105,7 +94,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/chengzuopeng/kline-charts-react.git"
+    "url": "git+https://github.com/chengzuopeng/kline-charts-react.git"
   },
   "bugs": {
     "url": "https://github.com/chengzuopeng/kline-charts-react/issues"
