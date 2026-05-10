@@ -12,20 +12,20 @@ function normalizePeriods(periods: number[] | undefined, fallback: number[]): nu
   return Array.from(new Set(cleaned)).sort((a, b) => a - b);
 }
 
-export function getMAPeriods(options?: MAOptions | boolean): number[] {
-  return normalizePeriods(typeof options === 'object' ? options.periods : undefined, [5, 10, 20, 30, 60]);
+export function getMAPeriods(options?: MAOptions): number[] {
+  return normalizePeriods(options?.periods, [5, 10, 20, 30, 60]);
 }
 
-export function getRSIPeriods(options?: RSIOptions | boolean): number[] {
-  return normalizePeriods(typeof options === 'object' ? options.periods : undefined, [6, 12, 24]);
+export function getRSIPeriods(options?: RSIOptions): number[] {
+  return normalizePeriods(options?.periods, [6, 12, 24]);
 }
 
-export function getWRPeriods(options?: WROptions | boolean): number[] {
-  return normalizePeriods(typeof options === 'object' ? options.periods : undefined, [6, 10]);
+export function getWRPeriods(options?: WROptions): number[] {
+  return normalizePeriods(options?.periods, [6, 10]);
 }
 
-export function getBIASPeriods(options?: BIASOptions | boolean): number[] {
-  return normalizePeriods(typeof options === 'object' ? options.periods : undefined, [6, 12, 24]);
+export function getBIASPeriods(options?: BIASOptions): number[] {
+  return normalizePeriods(options?.periods, [6, 12, 24]);
 }
 
 function getNumericSuffix(value: string): number {

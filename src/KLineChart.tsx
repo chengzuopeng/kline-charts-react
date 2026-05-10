@@ -618,8 +618,7 @@ export const KLineChart = forwardRef<KLineChartRef, KLineChartProps>(function KL
         </div>
       )}
 
-      {/* MA 数值显示 */}
-      {/* 主图指标数值显示（MA/BOLL） */}
+      {/* 主图指标数值显示（MA/BOLL/SAR/KC） */}
       {showIndicatorDisplay && (
         <IndicatorDisplay data={data} indicators={indicators} hoverIndex={hoverIndex} theme={themeConfig} />
       )}

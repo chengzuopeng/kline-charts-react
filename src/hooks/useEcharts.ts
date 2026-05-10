@@ -42,11 +42,11 @@ interface SetOptionOpts {
 
 interface UseEchartsResult {
   chartRef: React.RefObject<HTMLDivElement | null>;
-  setOption: (option: EChartsOption, opts?: boolean | SetOptionOpts, lazyUpdate?: boolean) => void;
+  setOption: (option: EChartsOption, opts?: SetOptionOpts) => void;
   resize: () => void;
   dispose: () => void;
   getInstance: () => EChartsInstance | null;
-  getDataURL: (opts?: { type?: 'png' | 'jpeg'; pixelRatio?: number; backgroundColor?: string }) => string;
+  getDataURL: (opts?: { type?: 'png' | 'jpeg'; pixelRatio?: number; backgroundColor?: string }) => string | null;
   bindEvent: (eventName: string, handler: (params: unknown) => void) => () => void;
 }
 
@@ -79,15 +79,8 @@ export function useEcharts(): UseEchartsResult {
 
   // 设置配置
   const setOption = useCallback(
-    (option: EChartsOption, opts?: boolean | SetOptionOpts, lazyUpdate = false) => {
-      // 兼容旧的 boolean 参数形式
-      let finalOpts: SetOptionOpts;
-      if (typeof opts === 'boolean') {
-        finalOpts = { notMerge: opts, lazyUpdate };
-      } else {
-        finalOpts = opts ?? {};
-      }
-      instanceRef.current?.setOption(option, finalOpts);
+    (option: EChartsOption, opts?: SetOptionOpts) => {
+      instanceRef.current?.setOption(option, opts ?? {});
     },
     []
   );
@@ -106,7 +99,7 @@ export function useEcharts(): UseEchartsResult {
   // 导出图片
   const getDataURL = useCallback(
     (opts?: { type?: 'png' | 'jpeg'; pixelRatio?: number; backgroundColor?: string }) => {
-      if (!instanceRef.current) return '';
+      if (!instanceRef.current) return null;
       return instanceRef.current.getDataURL({
         type: opts?.type ?? 'png',
         pixelRatio: opts?.pixelRatio ?? 2,

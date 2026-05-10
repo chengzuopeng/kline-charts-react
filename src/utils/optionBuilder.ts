@@ -29,35 +29,18 @@ function smartFormat(value: number, decimals: number): string {
 
 /**
  * Y轴数值格式化
- * 根据不同指标类型使用不同的格式化方式
- * 整数不显示 .00
+ * - 成交量按 万/亿 单位
+ * - 接近 0 的微小数值保留 4 位以避免变成 "0"
+ * - 其余统一保留 2 位（整数自动去掉 .00）
  */
 function formatYAxisValue(value: number, paneId: string): string {
-  // 成交量用万/亿格式
   if (paneId.includes('volume')) {
     return formatVolume(value);
   }
-  
-  // 对于较大的数值（如价格），保留两位小数
-  if (Math.abs(value) >= 100) {
-    return smartFormat(value, 2);
+  if (value !== 0 && Math.abs(value) < 0.01) {
+    return smartFormat(value, 4);
   }
-  
-  // 对于较小的数值（如 MACD、KDJ 等指标），根据数值大小动态调整精度
-  if (Math.abs(value) >= 10) {
-    return smartFormat(value, 2);
-  }
-  
-  if (Math.abs(value) >= 1) {
-    return smartFormat(value, 2);
-  }
-  
-  // 非常小的数值保留更多精度
-  if (Math.abs(value) >= 0.01) {
-    return smartFormat(value, 2);
-  }
-  
-  return smartFormat(value, 4);
+  return smartFormat(value, 2);
 }
 
 /**
@@ -217,12 +200,9 @@ export function buildOption(params: {
     theme,
     indicators,
     panes = getDefaultPanes(indicators),
-    // visibleCount 参数保留用于 API 兼容性，初始缩放状态由 KLineChart 组件设置
-    visibleCount: _visibleCount = 60,
     containerHeight = 500,
     indicatorOptions,
   } = params;
-  void _visibleCount; // 避免 unused variable 警告
   const maPeriods = getMAPeriods(indicatorOptions?.ma);
   const rsiPeriods = getRSIPeriods(indicatorOptions?.rsi);
   const wrPeriods = getWRPeriods(indicatorOptions?.wr);
@@ -757,6 +737,44 @@ export function buildOption(params: {
 }
 
 /**
+ * 合并 dataZoom 时保护内部 ID（kline-zoom-inside / kline-zoom-slider）
+ *
+ * 否则用户自定义 dataZoom 会替换整个数组，KLineChart 失去对缩放状态的引用，
+ * 导致撤销/重做与 onVisibleRangeChange 失效。
+ */
+function mergeDataZoom(
+  base: EChartsOption['dataZoom'],
+  custom: EChartsOption['dataZoom']
+): EChartsOption['dataZoom'] {
+  const baseArr = Array.isArray(base) ? base : base ? [base] : [];
+  const customArr = Array.isArray(custom) ? custom : custom ? [custom] : [];
+  if (customArr.length === 0) return baseArr;
+
+  type Zoom = { id?: string; [key: string]: unknown };
+  const customById = new Map<string, Zoom>();
+  const customExtras: Zoom[] = [];
+  for (const item of customArr as Zoom[]) {
+    if (item.id) customById.set(item.id, item);
+    else customExtras.push(item);
+  }
+
+  const merged: Zoom[] = (baseArr as Zoom[]).map((item) => {
+    if (item.id && customById.has(item.id)) {
+      const override = customById.get(item.id)!;
+      customById.delete(item.id);
+      return { ...item, ...override, id: item.id };
+    }
+    return item;
+  });
+
+  // 把消费者声明了 id 但 base 里不存在的项追加；以及没有 id 的项原样追加
+  for (const item of customById.values()) merged.push(item);
+  merged.push(...customExtras);
+
+  return merged as EChartsOption['dataZoom'];
+}
+
+/**
  * 合并 ECharts Option
  */
 export function mergeOption(
@@ -774,8 +792,10 @@ export function mergeOption(
     const customValue = customOption[key];
     if (customValue === undefined) continue;
 
-    // 数组字段直接替换
-    if (Array.isArray(customValue)) {
+    if (key === 'dataZoom') {
+      result.dataZoom = mergeDataZoom(baseOption.dataZoom, customOption.dataZoom);
+    } else if (Array.isArray(customValue)) {
+      // 其余数组字段直接替换
       (result as Record<string, unknown>)[key] = customValue;
     } else if (typeof customValue === 'object' && customValue !== null) {
       // 对象字段浅合并

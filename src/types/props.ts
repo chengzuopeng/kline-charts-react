@@ -162,22 +162,24 @@ export interface KCOptions {
 
 /**
  * 指标参数配置
+ *
+ * 是否显示指标由 `KLineChartProps.indicators` 控制；这里仅描述每个指标的算法参数。
  */
 export interface IndicatorOptions {
-  ma?: MAOptions | boolean;
-  macd?: MACDOptions | boolean;
-  boll?: BOLLOptions | boolean;
-  kdj?: KDJOptions | boolean;
-  rsi?: RSIOptions | boolean;
-  wr?: WROptions | boolean;
-  bias?: BIASOptions | boolean;
-  cci?: CCIOptions | boolean;
-  atr?: ATROptions | boolean;
-  obv?: OBVOptions | boolean;
-  roc?: ROCOptions | boolean;
-  dmi?: DMIOptions | boolean;
-  sar?: SAROptions | boolean;
-  kc?: KCOptions | boolean;
+  ma?: MAOptions;
+  macd?: MACDOptions;
+  boll?: BOLLOptions;
+  kdj?: KDJOptions;
+  rsi?: RSIOptions;
+  wr?: WROptions;
+  bias?: BIASOptions;
+  cci?: CCIOptions;
+  atr?: ATROptions;
+  obv?: OBVOptions;
+  roc?: ROCOptions;
+  dmi?: DMIOptions;
+  sar?: SAROptions;
+  kc?: KCOptions;
 }
 
 /**
@@ -343,6 +345,6 @@ export interface KLineChartRef {
   resetZoom(): void;
   getVisibleRange(): VisibleRange;
   getEchartsInstance(): EChartsType | null;
-  exportImage(type?: 'png' | 'jpeg'): string;
+  exportImage(type?: 'png' | 'jpeg'): string | null;
   getData(): KlineData[];
 }

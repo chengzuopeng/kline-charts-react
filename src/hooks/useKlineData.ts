@@ -243,61 +243,20 @@ function addIndicators(
   }));
 
   // 计算各指标
-  const maResult = indicators.includes('ma')
-    ? calcMA(closes, typeof options.ma === 'object' ? options.ma : {})
-    : null;
-
-  const macdResult = indicators.includes('macd')
-    ? calcMACD(closes, typeof options.macd === 'object' ? options.macd : {})
-    : null;
-
-  const bollResult = indicators.includes('boll')
-    ? calcBOLL(closes, typeof options.boll === 'object' ? options.boll : {})
-    : null;
-
-  const kdjResult = indicators.includes('kdj')
-    ? calcKDJ(ohlcv, typeof options.kdj === 'object' ? options.kdj : {})
-    : null;
-
-  const rsiResult = indicators.includes('rsi')
-    ? calcRSI(closes, typeof options.rsi === 'object' ? options.rsi : {})
-    : null;
-
-  const wrResult = indicators.includes('wr')
-    ? calcWR(ohlcv, typeof options.wr === 'object' ? options.wr : {})
-    : null;
-
-  const biasResult = indicators.includes('bias')
-    ? calcBIAS(closes, typeof options.bias === 'object' ? options.bias : {})
-    : null;
-
-  const cciResult = indicators.includes('cci')
-    ? calcCCI(ohlcv, typeof options.cci === 'object' ? options.cci : {})
-    : null;
-
-  const atrResult = indicators.includes('atr')
-    ? calcATR(ohlcv, typeof options.atr === 'object' ? options.atr : {})
-    : null;
-
-  const obvResult = indicators.includes('obv')
-    ? calcOBV(ohlcv, typeof options.obv === 'object' ? options.obv : {})
-    : null;
-
-  const rocResult = indicators.includes('roc')
-    ? calcROC(closes, typeof options.roc === 'object' ? options.roc : {})
-    : null;
-
-  const dmiResult = indicators.includes('dmi')
-    ? calcDMI(ohlcv, typeof options.dmi === 'object' ? options.dmi : {})
-    : null;
-
-  const sarResult = indicators.includes('sar')
-    ? calcSAR(ohlcv, typeof options.sar === 'object' ? options.sar : {})
-    : null;
-
-  const kcResult = indicators.includes('kc')
-    ? calcKC(ohlcv, typeof options.kc === 'object' ? options.kc : {})
-    : null;
+  const maResult = indicators.includes('ma') ? calcMA(closes, options.ma ?? {}) : null;
+  const macdResult = indicators.includes('macd') ? calcMACD(closes, options.macd ?? {}) : null;
+  const bollResult = indicators.includes('boll') ? calcBOLL(closes, options.boll ?? {}) : null;
+  const kdjResult = indicators.includes('kdj') ? calcKDJ(ohlcv, options.kdj ?? {}) : null;
+  const rsiResult = indicators.includes('rsi') ? calcRSI(closes, options.rsi ?? {}) : null;
+  const wrResult = indicators.includes('wr') ? calcWR(ohlcv, options.wr ?? {}) : null;
+  const biasResult = indicators.includes('bias') ? calcBIAS(closes, options.bias ?? {}) : null;
+  const cciResult = indicators.includes('cci') ? calcCCI(ohlcv, options.cci ?? {}) : null;
+  const atrResult = indicators.includes('atr') ? calcATR(ohlcv, options.atr ?? {}) : null;
+  const obvResult = indicators.includes('obv') ? calcOBV(ohlcv, options.obv ?? {}) : null;
+  const rocResult = indicators.includes('roc') ? calcROC(closes, options.roc ?? {}) : null;
+  const dmiResult = indicators.includes('dmi') ? calcDMI(ohlcv, options.dmi ?? {}) : null;
+  const sarResult = indicators.includes('sar') ? calcSAR(ohlcv, options.sar ?? {}) : null;
+  const kcResult = indicators.includes('kc') ? calcKC(ohlcv, options.kc ?? {}) : null;
 
   // 合并结果
   return data.map((item, i) => ({
