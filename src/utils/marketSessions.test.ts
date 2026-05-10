@@ -19,4 +19,11 @@ describe('isMarketTradingTime', () => {
   it('returns false on weekends', () => {
     expect(isMarketTradingTime('A', new Date('2026-04-25T02:00:00Z'))).toBe(false);
   });
+
+  it('treats the closing minute as non-trading (15:00 Beijing for A-share)', () => {
+    // 北京时间 15:00 == UTC 07:00；这一刻已收盘，不应再触发自动刷新
+    expect(isMarketTradingTime('A', new Date('2026-04-22T07:00:00Z'))).toBe(false);
+    // 14:59 北京时间仍在交易（UTC 06:59）
+    expect(isMarketTradingTime('A', new Date('2026-04-22T06:59:00Z'))).toBe(true);
+  });
 });

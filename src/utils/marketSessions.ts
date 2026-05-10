@@ -64,5 +64,6 @@ export function isMarketTradingTime(market: MarketType, date = new Date()): bool
     return false;
   }
 
-  return config.sessions.some(([start, end]) => minutes >= start && minutes <= end);
+  // 收盘时刻不算交易中（end 是闭市点）
+  return config.sessions.some(([start, end]) => minutes >= start && minutes < end);
 }
