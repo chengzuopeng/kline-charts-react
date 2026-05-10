@@ -59,7 +59,7 @@
     }
   },
   "dependencies": {
-    "stock-sdk": "1.8.3"
+    "stock-sdk": "1.9.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
