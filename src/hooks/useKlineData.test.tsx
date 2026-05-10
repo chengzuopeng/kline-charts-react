@@ -78,7 +78,7 @@ describe('useKlineData', () => {
   it('clears stale timeline data when leaving timeline mode', async () => {
     const provider: KLineDataProvider = {
       getKline: vi.fn().mockResolvedValue(sampleKlineData),
-      getTimeline: vi.fn().mockResolvedValue(sampleTimelineData),
+      getTimeline: vi.fn().mockResolvedValue({ data: sampleTimelineData, prevClose: 9.8 }),
     };
 
     const { result, rerender } = renderHook(
@@ -100,11 +100,14 @@ describe('useKlineData', () => {
       expect(result.current.timelineData).toHaveLength(sampleTimelineData.length);
     });
 
+    expect(result.current.prevClose).toBe(9.8);
+
     rerender({ period: 'daily' as 'timeline' | 'daily' });
 
     await waitFor(() => {
       expect(result.current.timelineData).toHaveLength(0);
     });
+    expect(result.current.prevClose).toBeNull();
   });
 
   it('recreates the default provider when sdkOptions change', async () => {

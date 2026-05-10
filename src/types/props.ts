@@ -201,11 +201,20 @@ export interface GetTimelineParams {
 }
 
 /**
+ * 分时数据返回结果
+ */
+export interface TimelineResult {
+  data: TimelineData[];
+  /** 昨收价（用于分时图涨跌着色与参考线） */
+  prevClose?: number | null;
+}
+
+/**
  * 数据源提供者
  */
 export interface KLineDataProvider {
   getKline: (params: GetKlineParams, signal?: AbortSignal) => Promise<KlineData[]>;
-  getTimeline?: (params: GetTimelineParams, signal?: AbortSignal) => Promise<TimelineData[]>;
+  getTimeline?: (params: GetTimelineParams, signal?: AbortSignal) => Promise<TimelineResult>;
 }
 
 /**

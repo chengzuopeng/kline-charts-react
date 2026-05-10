@@ -9,6 +9,7 @@ import type {
   AdjustType,
   IndicatorType,
   KLineDataProvider,
+  TimelineResult,
   SDKOptions,
   RequestOptions,
   IndicatorOptions,
@@ -46,23 +47,37 @@ interface UseKlineDataParams {
 interface UseKlineDataResult {
   data: KlineWithIndicators[];
   timelineData: TimelineData[];
+  /** 昨收价：仅在 period === 'timeline' 时有效，由数据源 provider 提供 */
+  prevClose: number | null;
   loading: boolean;
   error: Error | null;
   refresh: () => Promise<void>;
 }
 
 const klineCache = new DataCache<KlineData[]>();
-const timelineCache = new DataCache<TimelineData[]>();
+const timelineCache = new DataCache<TimelineResult>();
 
 // 请求去重：存储正在进行中的请求 Promise
 const pendingKlineRequests = new Map<string, Promise<KlineData[]>>();
-const pendingTimelineRequests = new Map<string, Promise<TimelineData[]>>();
+const pendingTimelineRequests = new Map<string, Promise<TimelineResult>>();
 
 /**
  * 默认防抖时间（毫秒）
  * 避免快速切换参数时发起过多请求
  */
 const DEFAULT_DEBOUNCE_MS = 150;
+
+/**
+ * 兼容 SDK 1.x 的两种 date 格式（YYYYMMDD 与 YYYY-MM-DD）
+ */
+function normalizeSdkDate(raw: string): string {
+  if (!raw) return raw;
+  if (raw.includes('-')) return raw;
+  if (raw.length === 8) {
+    return `${raw.slice(0, 4)}-${raw.slice(4, 6)}-${raw.slice(6, 8)}`;
+  }
+  return raw;
+}
 
 /**
  * 创建默认的数据提供者（基于 stock-sdk）
@@ -77,8 +92,9 @@ function createDefaultProvider(sdkOptions?: SDKOptions): KLineDataProvider {
       // 分时数据
       if (period === 'timeline') {
         const response = await sdk.getTodayTimeline(symbol);
+        const datePart = normalizeSdkDate(response.date);
         return response.data.map((item) => ({
-          date: `${response.date.slice(0, 4)}-${response.date.slice(4, 6)}-${response.date.slice(6, 8)} ${item.time}`,
+          date: `${datePart} ${item.time}`,
           open: item.price,
           close: item.price,
           high: item.price,
@@ -90,11 +106,11 @@ function createDefaultProvider(sdkOptions?: SDKOptions): KLineDataProvider {
 
       // 五日分时数据（使用1分钟K线获取最近5天数据）
       if (period === 'timeline5') {
-        // 计算5天前的日期
+        // 计算窗口起点：取 14 天足以覆盖长假（春节/国庆等）
         const endDate = new Date();
         const startDate = new Date();
-        startDate.setDate(startDate.getDate() - 7); // 多取几天以覆盖周末
-        
+        startDate.setDate(startDate.getDate() - 14);
+
         const formatDate = (d: Date) => {
           const year = d.getFullYear();
           const month = String(d.getMonth() + 1).padStart(2, '0');
@@ -185,7 +201,11 @@ function createDefaultProvider(sdkOptions?: SDKOptions): KLineDataProvider {
     },
     getTimeline: async (params) => {
       const response = await sdk.getTodayTimeline(params.symbol);
-      return response.data;
+      const prevClose = response.preClose;
+      return {
+        data: response.data,
+        prevClose: typeof prevClose === 'number' && prevClose > 0 ? prevClose : null,
+      };
     },
   };
 }
@@ -316,9 +336,14 @@ export function useKlineData(params: UseKlineDataParams): UseKlineDataResult {
   } = params;
 
   const [rawData, setRawData] = useState<KlineData[]>([]);
-  const [timelineState, setTimelineState] = useState<{ key: string; data: TimelineData[] }>({
+  const [timelineState, setTimelineState] = useState<{
+    key: string;
+    data: TimelineData[];
+    prevClose: number | null;
+  }>({
     key: '',
     data: [],
+    prevClose: null,
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
@@ -396,17 +421,17 @@ export function useKlineData(params: UseKlineDataParams): UseKlineDataResult {
       setRawData(klineData);
 
       if (period === 'timeline' && provider.getTimeline) {
-        let nextTimelineData = useDedupe ? timelineCache.get(timelineCacheKey) : undefined;
+        let nextTimelineResult = useDedupe ? timelineCache.get(timelineCacheKey) : undefined;
 
-        if (!nextTimelineData) {
-          setTimelineState({ key: timelineCacheKey, data: [] });
+        if (!nextTimelineResult) {
+          setTimelineState({ key: timelineCacheKey, data: [], prevClose: null });
 
           const pendingTimelineRequest = useDedupe
             ? pendingTimelineRequests.get(timelineCacheKey)
             : undefined;
           if (pendingTimelineRequest) {
             try {
-              nextTimelineData = await pendingTimelineRequest;
+              nextTimelineResult = await pendingTimelineRequest;
             } catch {
               // 复用的请求失败，忽略错误（会由原始请求处理）
             }
@@ -415,16 +440,20 @@ export function useKlineData(params: UseKlineDataParams): UseKlineDataResult {
             pendingTimelineRequests.set(timelineCacheKey, timelineRequest);
 
             try {
-              nextTimelineData = await timelineRequest;
+              nextTimelineResult = await timelineRequest;
             } finally {
               pendingTimelineRequests.delete(timelineCacheKey);
             }
           }
         }
 
-        if (isActiveRequest() && nextTimelineData) {
-          timelineCache.set(timelineCacheKey, nextTimelineData, ttl);
-          setTimelineState({ key: timelineCacheKey, data: nextTimelineData });
+        if (isActiveRequest() && nextTimelineResult) {
+          timelineCache.set(timelineCacheKey, nextTimelineResult, ttl);
+          setTimelineState({
+            key: timelineCacheKey,
+            data: nextTimelineResult.data,
+            prevClose: nextTimelineResult.prevClose ?? null,
+          });
         }
       }
     } catch (err) {
@@ -445,7 +474,7 @@ export function useKlineData(params: UseKlineDataParams): UseKlineDataResult {
 
     if (period === 'timeline') {
       timelineCache.delete(buildTimelineCacheKey({ symbol, market }));
-      setTimelineState({ key: '', data: [] });
+      setTimelineState({ key: '', data: [], prevClose: null });
     }
 
     await loadData();
@@ -478,7 +507,9 @@ export function useKlineData(params: UseKlineDataParams): UseKlineDataResult {
   );
 
   const activeTimelineKey = period === 'timeline' ? buildTimelineCacheKey({ symbol, market }) : '';
-  const timelineData = timelineState.key === activeTimelineKey ? timelineState.data : [];
+  const isTimelineActive = timelineState.key === activeTimelineKey;
+  const timelineData = isTimelineActive ? timelineState.data : [];
+  const prevClose = isTimelineActive ? timelineState.prevClose : null;
 
-  return { data, timelineData, loading, error, refresh };
+  return { data, timelineData, prevClose, loading, error, refresh };
 }

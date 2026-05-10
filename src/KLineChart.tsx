@@ -117,7 +117,7 @@ export const KLineChart = forwardRef<KLineChartRef, KLineChartProps>(function KL
   );
 
   // 数据获取
-  const { data, timelineData, loading, error, refresh } = useKlineData({
+  const { data, timelineData, prevClose, loading, error, refresh } = useKlineData({
     symbol,
     market,
     period,
@@ -279,7 +279,6 @@ export const KLineChart = forwardRef<KLineChartRef, KLineChartProps>(function KL
 
     // 分时图使用专门的构建器
     if (isTimelinePeriod(period) && timelineData.length > 0) {
-      const prevClose = data.length > 0 ? (data[0]?.close ?? undefined) : undefined;
       chartOption = buildTimelineOption({
         data: timelineData,
         theme: themeConfig,
@@ -324,6 +323,7 @@ export const KLineChart = forwardRef<KLineChartRef, KLineChartProps>(function KL
   }, [
     data,
     timelineData,
+    prevClose,
     themeConfig,
     indicators,
     actualPanes,
