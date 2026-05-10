@@ -316,13 +316,11 @@ export function calcRSI(
       } else if (i === period) {
         avgGain = (avgGain + gain) / period;
         avgLoss = (avgLoss + loss) / period;
-        const rs = avgLoss === 0 ? 100 : avgGain / avgLoss;
-        rsi.push(100 - 100 / (1 + rs));
+        rsi.push(avgLoss === 0 ? 100 : 100 - 100 / (1 + avgGain / avgLoss));
       } else {
         avgGain = (avgGain * (period - 1) + gain) / period;
         avgLoss = (avgLoss * (period - 1) + loss) / period;
-        const rs = avgLoss === 0 ? 100 : avgGain / avgLoss;
-        rsi.push(100 - 100 / (1 + rs));
+        rsi.push(avgLoss === 0 ? 100 : 100 - 100 / (1 + avgGain / avgLoss));
       }
     }
 
