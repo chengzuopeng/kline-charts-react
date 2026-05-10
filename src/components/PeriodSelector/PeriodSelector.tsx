@@ -44,15 +44,16 @@ const PERIOD_GROUPS: PeriodGroup[] = [
  */
 export function PeriodSelector({ value, onChange }: PeriodSelectorProps) {
   return (
-    <div className={styles.container}>
+    <div className={styles.container} role="toolbar" aria-label="周期切换">
       {PERIOD_GROUPS.map((group) => (
-        <div key={group.label} className={styles.group}>
+        <div key={group.label} className={styles.group} role="group" aria-label={group.label}>
           {group.periods.map((period) => (
             <button
               key={period.value}
               type="button"
               className={`${styles.button} ${value === period.value ? styles.active : ''}`}
               onClick={() => onChange(period.value)}
+              aria-pressed={value === period.value}
             >
               {period.label}
             </button>

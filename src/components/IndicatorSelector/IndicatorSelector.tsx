@@ -89,7 +89,7 @@ export function IndicatorSelector({
   };
 
   return (
-    <div className={styles.container}>
+    <div className={styles.container} role="toolbar" aria-label="技术指标切换">
       {/* 主图指标 */}
       {MAIN_INDICATORS.map((indicator) => (
         <button
@@ -97,14 +97,15 @@ export function IndicatorSelector({
           type="button"
           className={`${styles.button} ${value.includes(indicator.value) ? styles.active : ''}`}
           onClick={() => handleToggle(indicator.value)}
+          aria-pressed={value.includes(indicator.value)}
         >
           {indicator.label}
         </button>
       ))}
-      
+
       {/* 分隔线 */}
       <div className={styles.divider} />
-      
+
       {/* 副图指标 */}
       {SUB_INDICATORS.map((indicator) => (
         <button
@@ -112,6 +113,7 @@ export function IndicatorSelector({
           type="button"
           className={`${styles.button} ${value.includes(indicator.value) ? styles.active : ''}`}
           onClick={() => handleToggle(indicator.value)}
+          aria-pressed={value.includes(indicator.value)}
         >
           {indicator.label}
         </button>
