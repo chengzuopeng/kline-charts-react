@@ -353,6 +353,11 @@ export function useKlineData(params: UseKlineDataParams): UseKlineDataResult {
   const providerRef = useRef<KLineDataProvider | null>(null);
   const requestIdRef = useRef(0);
 
+  // 仅依赖原始字段而非整个 requestOptions 对象，避免内联 `requestOptions={{}}` 反复重置 debounce
+  const debounceMs = requestOptions?.debounceMs ?? DEFAULT_DEBOUNCE_MS;
+  const abortOnChange = requestOptions?.abortOnChange !== false;
+  const useDedupe = requestOptions?.dedupe !== false;
+
   useEffect(() => {
     if (!dataProvider) {
       providerRef.current = null;
@@ -371,14 +376,13 @@ export function useKlineData(params: UseKlineDataParams): UseKlineDataResult {
   // 加载数据
   const loadData = useCallback(async () => {
     // 取消之前的请求
-    if (requestOptions?.abortOnChange !== false && abortControllerRef.current) {
+    if (abortOnChange && abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
 
     const controller = new AbortController();
     const requestId = ++requestIdRef.current;
     abortControllerRef.current = controller;
-    const useDedupe = requestOptions?.dedupe !== false;
     const isActiveRequest = () => requestId === requestIdRef.current && !controller.signal.aborted;
 
     setLoading(true);
@@ -464,7 +468,7 @@ export function useKlineData(params: UseKlineDataParams): UseKlineDataResult {
         setLoading(false);
       }
     }
-  }, [symbol, market, period, adjust, getProvider, requestOptions]);
+  }, [symbol, market, period, adjust, getProvider, abortOnChange, useDedupe]);
 
   // 刷新方法
   const refresh = useCallback(async () => {
@@ -487,7 +491,6 @@ export function useKlineData(params: UseKlineDataParams): UseKlineDataResult {
       clearTimeout(debounceTimerRef.current);
     }
 
-    const debounceMs = requestOptions?.debounceMs ?? DEFAULT_DEBOUNCE_MS;
     debounceTimerRef.current = setTimeout(loadData, debounceMs);
 
     return () => {
@@ -498,12 +501,20 @@ export function useKlineData(params: UseKlineDataParams): UseKlineDataResult {
         abortControllerRef.current.abort();
       }
     };
-  }, [symbol, market, period, adjust, loadData, requestOptions?.debounceMs]);
+  }, [symbol, market, period, adjust, loadData, debounceMs]);
 
-  // 计算带指标的数据（仅在原始数据、指标列表或指标参数变化时重算）
+  // 用内容指纹做 memo key，避免上层内联传 indicators / indicatorOptions 时反复重算
+  const indicatorsKey = indicators.join('|');
+  const indicatorOptionsKey = useMemo(
+    () => JSON.stringify(indicatorOptions ?? {}),
+    [indicatorOptions]
+  );
+
   const data = useMemo(
     () => addIndicators(rawData, indicators, indicatorOptions),
-    [rawData, indicators, indicatorOptions]
+    // memo 用内容指纹做 key（而非数组/对象引用本身），避免上层内联 props 触发重算
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [rawData, indicatorsKey, indicatorOptionsKey]
   );
 
   const activeTimelineKey = period === 'timeline' ? buildTimelineCacheKey({ symbol, market }) : '';
