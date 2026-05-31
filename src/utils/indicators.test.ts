@@ -209,19 +209,45 @@ describe('calcROC', () => {
 });
 
 describe('calcDMI', () => {
+  const series: OHLCV[] = Array.from({ length: 60 }, (_, i) => ({
+    open: 100 + i,
+    close: 100 + i + (i % 3 === 0 ? 1 : -1),
+    high: 100 + i + 2,
+    low: 100 + i - 2,
+    volume: 1000,
+  }));
+
   it('returns numbers for ADX after sufficient warm-up', () => {
-    const big: OHLCV[] = Array.from({ length: 60 }, (_, i) => ({
-      open: 100 + i,
-      close: 100 + i + (i % 3 === 0 ? 1 : -1),
-      high: 100 + i + 2,
-      low: 100 + i - 2,
-      volume: 1000,
-    }));
-    const result = calcDMI(big, { period: 14, adxPeriod: 14 });
+    const result = calcDMI(series, { period: 14, adxPeriod: 14 });
     const last = result[result.length - 1]!;
     expect(typeof last.pdi).toBe('number');
     expect(typeof last.mdi).toBe('number');
     expect(typeof last.adx).toBe('number');
+  });
+
+  it('ADX equals the simple average of the last adxPeriod DX values', () => {
+    const period = 14;
+    const adxPeriod = 14;
+    const result = calcDMI(series, { period, adxPeriod });
+
+    // 从暴露的 pdi/mdi 反推每个点的 DX，作为独立 oracle
+    const dx = result.map((r) =>
+      r.pdi !== null && r.mdi !== null
+        ? (Math.abs(r.pdi - r.mdi) / (r.pdi + r.mdi || 1)) * 100
+        : null
+    );
+
+    let checked = 0;
+    for (let i = 0; i < result.length; i++) {
+      const adx = result[i]!.adx;
+      if (adx === null) continue;
+      let sum = 0;
+      for (let j = i - adxPeriod + 1; j <= i; j++) sum += dx[j] ?? 0;
+      expect(adx).toBeCloseTo(sum / adxPeriod, 6);
+      checked++;
+    }
+    // 确保确实断言到了若干个点，而不是全被 null 跳过
+    expect(checked).toBeGreaterThan(0);
   });
 });
 

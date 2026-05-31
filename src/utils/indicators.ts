@@ -657,11 +657,15 @@ export function calcDMI(
   const trList: number[] = [];
   const plusDMList: number[] = [];
   const minusDMList: number[] = [];
+  // 缓存每个位置的 DX，避免计算 ADX 时反复重算历史（原实现是 O(n·period·adxPeriod) 三重循环）。
+  // 与 result 同样按数据下标 i 对齐：未计算的点用 null 占位。
+  const dxList: (number | null)[] = [];
 
   for (let i = 0; i < data.length; i++) {
     const item = data[i];
     if (item === undefined || item.high === null || item.low === null || item.close === null) {
       result.push({ pdi: null, mdi: null, adx: null, adxr: null });
+      dxList.push(null);
       continue;
     }
 
@@ -707,10 +711,11 @@ export function calcDMI(
 
     if (i < period - 1) {
       result.push({ pdi: null, mdi: null, adx: null, adxr: null });
+      dxList.push(null);
       continue;
     }
 
-    // 计算平滑的 TR、+DM、-DM
+    // 计算平滑的 TR、+DM、-DM（period 窗口的简单求和）
     let smoothTR = 0;
     let smoothPlusDM = 0;
     let smoothMinusDM = 0;
@@ -727,30 +732,15 @@ export function calcDMI(
     // DX
     const diSum = pdi + mdi;
     const dx = diSum > 0 ? (Math.abs(pdi - mdi) / diSum) * 100 : 0;
+    dxList.push(dx);
 
-    // 计算 ADX（DX 的平滑均值）
+    // ADX = 最近 adxPeriod 个 DX 的简单均值（直接读缓存的 dxList，O(adxPeriod)）
     let adx: number | null = null;
     if (i >= period - 1 + adxPeriod - 1) {
       let dxSum = 0;
       for (let j = i - adxPeriod + 1; j <= i; j++) {
-        const prevR = result[j];
-        if (prevR === undefined) continue;
-        // 重新计算该位置的 DX
-        let prevSmTR = 0;
-        let prevSmPlusDM = 0;
-        let prevSmMinusDM = 0;
-        for (let k = j - period + 1; k <= j; k++) {
-          prevSmTR += trList[k] ?? 0;
-          prevSmPlusDM += plusDMList[k] ?? 0;
-          prevSmMinusDM += minusDMList[k] ?? 0;
-        }
-        const prevPdi = prevSmTR > 0 ? (prevSmPlusDM / prevSmTR) * 100 : 0;
-        const prevMdi = prevSmTR > 0 ? (prevSmMinusDM / prevSmTR) * 100 : 0;
-        const prevDiSum = prevPdi + prevMdi;
-        const prevDx = prevDiSum > 0 ? (Math.abs(prevPdi - prevMdi) / prevDiSum) * 100 : 0;
-        dxSum += prevDx;
+        dxSum += dxList[j] ?? 0;
       }
-      dxSum += dx; // 当前 dx
       adx = dxSum / adxPeriod;
     }
 
