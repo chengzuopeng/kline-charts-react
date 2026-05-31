@@ -166,7 +166,10 @@ const customProvider: KLineDataProvider = {
   // 分时数据（可选，仅分时模式使用）
   getTimeline: async (params, signal) => {
     const res = await fetch(`/api/timeline?symbol=${params.symbol}`, { signal });
-    return res.json(); // 返回 TimelineData[]
+    const json = await res.json();
+    // 推荐返回 { data, prevClose }：prevClose（昨收）用于分时图的涨跌着色与昨收参考线
+    return { data: json.data, prevClose: json.prevClose };
+    // 也兼容直接 return TimelineData[]（此时无昨收线）
   },
 };
 
@@ -198,7 +201,7 @@ interface KlineData {
 
 #### TimelineData 数据结构
 
-`getTimeline` 需要返回 `TimelineData[]`，用于分时图展示：
+`getTimeline` 推荐返回 `TimelineResult`（`{ data, prevClose }`），其中 `data` 为分时序列、`prevClose` 为昨收价；也兼容直接返回 `TimelineData[]`：
 
 ```ts
 interface TimelineData {
@@ -207,6 +210,11 @@ interface TimelineData {
   volume: number;     // 累计成交量
   amount: number;     // 累计成交额
   avgPrice: number;   // 均价
+}
+
+interface TimelineResult {
+  data: TimelineData[];
+  prevClose?: number | null;  // 昨收价：用于分时图涨跌着色与昨收参考线，缺省则不绘制昨收线
 }
 ```
 
@@ -296,8 +304,8 @@ import { useKlineData, Toolbar } from 'kline-charts-react/unstable';
 | `zoomTo(start, end)` | 缩放到指定范围 |
 | `resetZoom()` | 重置缩放 |
 | `getVisibleRange()` | 获取当前可见范围 `{ start, end }` |
-| `getEchartsInstance()` | 获取 ECharts 实例 |
-| `exportImage(type?)` | 导出图片（png/jpeg） |
+| `getEchartsInstance()` | 获取 ECharts 实例，未初始化时返回 `null` |
+| `exportImage(type?)` | 导出图片（png/jpeg），图表实例未就绪时返回 `null` |
 | `getData()` | 获取当前数据 |
 
 ### PeriodType
