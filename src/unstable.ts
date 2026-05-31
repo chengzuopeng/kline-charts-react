@@ -4,7 +4,6 @@ export {
   PeriodSelector,
   IndicatorSelector,
   Toolbar,
-  MADisplay,
   IndicatorDisplay,
   SubPaneTitle,
 } from './components';
