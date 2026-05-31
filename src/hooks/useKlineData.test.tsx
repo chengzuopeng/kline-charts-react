@@ -110,6 +110,31 @@ describe('useKlineData', () => {
     expect(result.current.prevClose).toBeNull();
   });
 
+  it('accepts a legacy getTimeline that returns a bare TimelineData[] (back-compat)', async () => {
+    const provider: KLineDataProvider = {
+      getKline: vi.fn().mockResolvedValue(sampleKlineData),
+      // 旧契约：直接返回数组，没有 prevClose
+      getTimeline: vi.fn().mockResolvedValue(sampleTimelineData),
+    };
+
+    const { result } = renderHook(() =>
+      useKlineData({
+        symbol: 'legacy-timeline-case',
+        market: 'A',
+        period: 'timeline',
+        adjust: 'qfq',
+        dataProvider: provider,
+        requestOptions: { debounceMs: 0 },
+      })
+    );
+
+    await waitFor(() => {
+      expect(result.current.timelineData).toHaveLength(sampleTimelineData.length);
+    });
+    // 数组形态没有昨收，归一后为 null，但分时数据照常可用
+    expect(result.current.prevClose).toBeNull();
+  });
+
   it('recreates the default provider when sdkOptions change', async () => {
     const initialOptions: SDKOptions = { baseUrl: '/qt' };
     const nextOptions: SDKOptions = { baseUrl: '/qt-v2' };

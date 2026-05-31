@@ -68,6 +68,14 @@ const pendingTimelineRequests = new Map<string, Promise<TimelineResult>>();
 const DEFAULT_DEBOUNCE_MS = 150;
 
 /**
+ * 把 provider.getTimeline 的两种返回形态归一为 TimelineResult。
+ * 兼容旧契约（直接返回 TimelineData[]）与新契约（{ data, prevClose }）。
+ */
+function normalizeTimelineResult(raw: TimelineResult | TimelineData[]): TimelineResult {
+  return Array.isArray(raw) ? { data: raw, prevClose: null } : raw;
+}
+
+/**
  * 兼容 SDK 1.x 的两种 date 格式（YYYYMMDD 与 YYYY-MM-DD）
  */
 function normalizeSdkDate(raw: string): string {
@@ -399,7 +407,9 @@ export function useKlineData(params: UseKlineDataParams): UseKlineDataResult {
               // 复用的请求失败，忽略错误（会由原始请求处理）
             }
           } else {
-            const timelineRequest = provider.getTimeline({ symbol, market }, controller.signal);
+            const timelineRequest = Promise.resolve(
+              provider.getTimeline({ symbol, market }, controller.signal)
+            ).then(normalizeTimelineResult);
             pendingTimelineRequests.set(timelineCacheKey, timelineRequest);
 
             try {

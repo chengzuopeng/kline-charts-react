@@ -216,7 +216,16 @@ export interface TimelineResult {
  */
 export interface KLineDataProvider {
   getKline: (params: GetKlineParams, signal?: AbortSignal) => Promise<KlineData[]>;
-  getTimeline?: (params: GetTimelineParams, signal?: AbortSignal) => Promise<TimelineResult>;
+  /**
+   * 分时数据（可选，仅分时模式使用）。
+   *
+   * 推荐返回 `TimelineResult`（`{ data, prevClose }`）以驱动分时图的涨跌着色与昨收线；
+   * 也兼容直接返回 `TimelineData[]`（此时 prevClose 视为缺省）。
+   */
+  getTimeline?: (
+    params: GetTimelineParams,
+    signal?: AbortSignal
+  ) => Promise<TimelineResult | TimelineData[]>;
 }
 
 /**
