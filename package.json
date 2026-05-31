@@ -1,6 +1,6 @@
 {
   "name": "kline-charts-react",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "description": "Professional stock K-line chart React component with built-in data source, powered by ECharts and stock-sdk",
   "author": "chengzuopeng",
   "license": "MIT",
