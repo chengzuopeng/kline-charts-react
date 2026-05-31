@@ -1,4 +1,9 @@
 import type { IndicatorType } from '@/types';
+import {
+  MAIN_INDICATOR_METAS,
+  SUB_INDICATOR_METAS,
+  getIndicatorGroup,
+} from '@/utils/indicatorMeta';
 import styles from './IndicatorSelector.module.css';
 
 interface IndicatorSelectorProps {
@@ -8,40 +13,9 @@ interface IndicatorSelectorProps {
   maxMainIndicators?: number; // 最大主图指标数量
 }
 
-interface IndicatorItem {
-  value: IndicatorType;
-  label: string;
-  group: 'main' | 'sub';
-}
-
-// 主图指标
-const MAIN_INDICATORS: IndicatorItem[] = [
-  { value: 'ma', label: 'MA', group: 'main' },
-  { value: 'boll', label: 'BOLL', group: 'main' },
-  { value: 'sar', label: 'SAR', group: 'main' },
-  { value: 'kc', label: 'KC', group: 'main' },
-];
-
-// 副图指标
-const SUB_INDICATORS: IndicatorItem[] = [
-  { value: 'volume', label: '成交量', group: 'sub' },
-  { value: 'macd', label: 'MACD', group: 'sub' },
-  { value: 'kdj', label: 'KDJ', group: 'sub' },
-  { value: 'rsi', label: 'RSI', group: 'sub' },
-  { value: 'wr', label: 'WR', group: 'sub' },
-  { value: 'bias', label: 'BIAS', group: 'sub' },
-  { value: 'cci', label: 'CCI', group: 'sub' },
-  { value: 'atr', label: 'ATR', group: 'sub' },
-  { value: 'obv', label: 'OBV', group: 'sub' },
-  { value: 'roc', label: 'ROC', group: 'sub' },
-  { value: 'dmi', label: 'DMI', group: 'sub' },
-];
-
-// 获取指标分组
-function getIndicatorGroup(indicator: IndicatorType): 'main' | 'sub' {
-  const mainItem = MAIN_INDICATORS.find((i) => i.value === indicator);
-  return mainItem ? 'main' : 'sub';
-}
+// 主图 / 副图指标列表（来自 indicatorMeta 单一数据源）
+const MAIN_INDICATORS = MAIN_INDICATOR_METAS;
+const SUB_INDICATORS = SUB_INDICATOR_METAS;
 
 /**
  * 指标选择器组件

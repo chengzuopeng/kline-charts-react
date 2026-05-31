@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import type { KlineWithIndicators, IndicatorType, PaneConfig } from '@/types';
 import styles from './SubPaneTitle.module.css';
 import { formatPrice, formatVolume } from '@/utils/formatters';
-import { formatMetricLabel, getMetricEntries } from '@/utils/indicatorMeta';
+import { INDICATOR_LABELS, formatMetricLabel, getMetricEntries } from '@/utils/indicatorMeta';
 import { calculateGridLayout } from '@/utils/optionBuilder';
 
 interface SubPaneTitleProps {
@@ -11,27 +11,6 @@ interface SubPaneTitleProps {
   hoverIndex?: number | null;
   containerHeight: number;
 }
-
-/**
- * 指标显示名称
- */
-const INDICATOR_LABELS: Record<IndicatorType, string> = {
-  ma: 'MA',
-  boll: 'BOLL',
-  sar: 'SAR',
-  kc: 'KC',
-  volume: '成交量',
-  macd: 'MACD',
-  kdj: 'KDJ',
-  rsi: 'RSI',
-  wr: 'WR',
-  bias: 'BIAS',
-  cci: 'CCI',
-  atr: 'ATR',
-  obv: 'OBV',
-  roc: 'ROC',
-  dmi: 'DMI',
-};
 
 /**
  * 获取指标数值文本

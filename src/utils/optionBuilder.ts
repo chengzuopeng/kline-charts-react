@@ -1,14 +1,19 @@
 import type { EChartsOption } from 'echarts';
 import type { KlineWithIndicators, ThemeConfig, IndicatorType, PaneConfig, IndicatorOptions } from '@/types';
 import { formatKlineTooltip, formatVolume } from './formatters';
-import { getBIASPeriods, getMAPeriods, getRSIPeriods, getWRPeriods } from './indicatorMeta';
-
+import {
+  MAIN_INDICATOR_KEYS,
+  getBIASPeriods,
+  getMAPeriods,
+  getRSIPeriods,
+  getWRPeriods,
+} from './indicatorMeta';
 
 /**
- * 主图指标列表（在主图显示的指标）
- * SAR 和 KC 是主图指标
+ * 主图指标列表（ma / boll / sar / kc 在主图叠加显示）
+ * 来自 indicatorMeta 单一数据源
  */
-const MAIN_INDICATORS: IndicatorType[] = ['ma', 'boll', 'sar', 'kc'];
+const MAIN_INDICATORS: IndicatorType[] = MAIN_INDICATOR_KEYS;
 
 export const DATA_ZOOM_INSIDE_ID = 'kline-zoom-inside';
 export const DATA_ZOOM_SLIDER_ID = 'kline-zoom-slider';
